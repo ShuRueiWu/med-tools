@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BSA 體表面積估算（Lund-Browder 加權）</title>
+<style>
+  :root{
+    --bg:#F5EEE1; --panel:#FFFBF3; --panel2:#FBF4E8;
+    --ink:#3E372E; --muted:#8A7E6E; --line:#E4D8C4;
+    --accent:#C2703D; --accent-soft:#F0DBC6;
+    --good:#5E8C5A; --paint:#DC3232;
+    --shadow:0 2px 10px rgba(120,90,50,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:18px 16px 60px;}
+  h1{font-size:20px;margin:0 0 2px;letter-spacing:.5px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .card h2{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 10px;
+    text-transform:uppercase;letter-spacing:1px;}
+
+  /* 年齡選擇 */
+  .ages{display:flex;flex-wrap:wrap;gap:8px;}
+  .ages button{flex:1 1 auto;min-width:84px;padding:9px 6px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+    font-size:14px;cursor:pointer;transition:.12s;line-height:1.25;}
+  .ages button small{display:block;color:var(--muted);font-size:11px;}
+  .ages button.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ages button.on small{color:#ffe9d8;}
+  .ageref{margin-top:10px;font-size:12.5px;color:var(--muted);}
+  .ageref b{color:var(--accent);}
+
+  /* 工具列 */
+  .tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .seg button{padding:9px 16px;border:0;background:var(--panel2);color:var(--ink);
+    font-size:14px;cursor:pointer;}
+  .seg button.on{background:var(--accent);color:#fff;}
+  .slider{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .slider input{width:130px;}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);font-size:13px;cursor:pointer;}
+  .btn:active{transform:translateY(1px);}
+  .spacer{flex:1 1 auto;}
+
+  /* 人形圖 */
+  .bodies{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+  .bodybox{flex:1 1 280px;max-width:380px;text-align:center;}
+  .bodybox .lbl{font-size:13px;color:var(--muted);margin-bottom:6px;}
+  canvas{width:100%;max-width:300px;height:auto;border-radius:12px;
+    background:var(--panel2);border:1px solid var(--line);touch-action:none;
+    cursor:crosshair;display:block;margin:0 auto;}
+
+  /* 結果 */
+  .result{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;}
+  .bignum{flex:1 1 200px;background:var(--accent-soft);border-radius:12px;
+    padding:18px;text-align:center;}
+  .bignum .n{font-size:46px;font-weight:700;color:var(--accent);line-height:1;}
+  .bignum .u{font-size:15px;color:var(--accent);opacity:.8;}
+  .bignum .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+  .breakdown{flex:2 1 320px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);}
+  th{color:var(--muted);font-weight:600;font-size:12px;}
+  td.val{text-align:right;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600;}
+  .empty{color:var(--muted);font-size:13px;padding:10px 8px;}
+  .bar{height:6px;border-radius:3px;background:var(--accent);opacity:.85;}
+
+  .note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:4px;}
+  .note b{color:var(--ink);}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px;}
+  details table{margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BSA 體表面積估算工具</h1>
+  <p class="sub">滑鼠/手指塗色標示受影響皮膚 → 即時估計 %TBSA · Lund-Browder 分區年齡加權</p>
+
+  <div class="card">
+    <h2>年齡</h2>
+    <div class="ages" id="ages"></div>
+    <div class="ageref" id="ageref"></div>
+  </div>
+
+  <div class="card">
+    <h2>工具</h2>
+    <div class="tools">
+      <div class="seg" id="toolseg">
+        <button data-tool="paint" class="on">🖌 塗</button>
+        <button data-tool="erase">🩹 擦</button>
+      </div>
+      <div class="slider">筆刷
+        <input type="range" id="brush" min="3" max="22" value="8">
+        <span id="brushv">8</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" id="clearFront">清前面</button>
+      <button class="btn" id="clearBack">清背面</button>
+      <button class="btn" id="clearAll">全部清除</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="bodies">
+      <div class="bodybox">
+        <div class="lbl">前面 (Anterior)</div>
+        <canvas id="cv_front"></canvas>
+      </div>
+      <div class="bodybox">
+        <div class="lbl">背面 (Posterior)</div>
+        <canvas id="cv_back"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>結果</h2>
+    <div class="result">
+      <div class="bignum">
+        <div><span class="n" id="totalNum">0.0</span><span class="u"> %</span></div>
+        <div class="cap">估計受影響體表面積<br>(%TBSA)</div>
+      </div>
+      <div class="breakdown">
+        <table>
+          <thead><tr><th>部位</th><th></th><th style="text-align:right">占全身 %</th></tr></thead>
+          <tbody id="bdBody"></tbody>
+        </table>
+        <div class="empty" id="bdEmpty">尚未塗色。</div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px;">
+      <b>臨床參考</b>：病人「手掌+五指併攏」≈ <b>1% BSA</b>，可快速校準零星病灶。
+      頭、大腿、小腿占比隨年齡變動（嬰兒頭大、腿小），故估面積務必先選對年齡欄。
+    </p>
+    <details style="margin-top:10px;">
+      <summary>Lund-Browder 完整對照表（各年齡 %，½ 部位值 A/B/C）</summary>
+      <table>
+        <thead><tr><th>½ 部位</th><th style="text-align:right">0歲</th><th style="text-align:right">1歲</th><th style="text-align:right">5歲</th><th style="text-align:right">10歲</th><th style="text-align:right">15歲</th><th style="text-align:right">成人</th></tr></thead>
+        <tbody>
+          <tr><td>A = ½ 頭</td><td class="val">9.5</td><td class="val">8.5</td><td class="val">6.5</td><td class="val">5.5</td><td class="val">4.5</td><td class="val">3.5</td></tr>
+          <tr><td>B = ½ 單側大腿</td><td class="val">2.75</td><td class="val">3.25</td><td class="val">4.0</td><td class="val">4.25</td><td class="val">4.5</td><td class="val">4.75</td></tr>
+          <tr><td>C = ½ 單側小腿</td><td class="val">2.5</td><td class="val">2.5</td><td class="val">2.75</td><td class="val">3.0</td><td class="val">3.25</td><td class="val">3.5</td></tr>
+        </tbody>
+      </table>
+      <p class="note">其餘固定值：頸 2、前/後軀幹各 13、單側臀 2.5、生殖器 1、單側上臂 4、前臂 3、手 2.5、足 3.5（前後各半）。各欄合計 = 100%。</p>
+    </details>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---- roundRect polyfill (保險) ----
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    if(typeof r==='number')r={tl:r,tr:r,br:r,bl:r};
+    this.moveTo(x+r.tl,y);
+    this.lineTo(x+w-r.tr,y);this.arcTo(x+w,y,x+w,y+r.tr,r.tr);
+    this.lineTo(x+w,y+h-r.br);this.arcTo(x+w,y+h,x+w-r.br,y+h,r.br);
+    this.lineTo(x+r.bl,y+h);this.arcTo(x,y+h,x,y+h-r.bl,r.bl);
+    this.lineTo(x,y+r.tl);this.arcTo(x,y,x+r.tl,y,r.tl);
+    return this;
+  };
+}
+
+// ---- 尺寸 ----
+const VW=200, VH=440;
+const SKIN='#ecd9c0', OUTLINE='#c7b393';
+
+// ---- Lund-Browder 年齡資料（A=½頭, B=½單側大腿, C=½單側小腿）----
+const ageData={
+  '0'    :{A:9.5, B:2.75, C:2.5 },
+  '1'    :{A:8.5, B:3.25, C:2.5 },
+  '5'    :{A:6.5, B:4.0,  C:2.75},
+  '10'   :{A:5.5, B:4.25, C:3.0 },
+  '15'   :{A:4.5, B:4.5,  C:3.25},
+  'adult':{A:3.5, B:4.75, C:3.5 },
+};
+const ageList=[
+  {k:'0',    t:'嬰兒', s:'0 歲'},
+  {k:'1',    t:'幼兒', s:'1 歲'},
+  {k:'5',    t:'兒童', s:'5 歲'},
+  {k:'10',   t:'學齡', s:'10 歲'},
+  {k:'15',   t:'青少年',s:'15 歲'},
+  {k:'adult',t:'成人', s:'≥16 歲'},
+];
+let currentAge='adult';
+
+// ---- 幾何（前後共用，軀幹區段不同）----
+function circle(cx,cy,r){return c=>c.arc(cx,cy,r,0,Math.PI*2);}
+function ell(cx,cy,rx,ry){return c=>c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);}
+function rr(x,y,w,h,r){return c=>c.roundRect(x,y,w,h,r);}
+function poly(p){return c=>{c.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)c.lineTo(p[i][0],p[i][1]);c.closePath();};}
+
+const G={
+  head : circle(100,42,28),
+  neck : rr(89,64,22,24,6),
+  trunk: poly([[60,88],[140,88],[134,160],[130,232],[70,232],[66,160]]),
+  genit: rr(92,224,16,16,4),
+  buttR: ell(83,238,20,15),
+  buttL: ell(117,238,20,15),
+  uaR  : rr(38,98,24,68,11),
+  uaL  : rr(138,98,24,68,11),
+  faR  : rr(36,168,22,64,10),
+  faL  : rr(142,168,22,64,10),
+  handR: ell(46,245,13,17),
+  handL: ell(154,245,13,17),
+  thighR: rr(64,232,32,100,13),
+  thighL: rr(104,232,32,100,13),
+  legR : rr(68,330,24,78,10),
+  legL : rr(108,330,24,78,10),
+  footR: ell(80,420,15,11),
+  footL: ell(120,420,15,11),
+};
+
+// pct(age) helpers
+const P=v=>()=>v;
+const PA=k=>a=>a[k];
+
+// 部位群組（前後/左右合併顯示用）
+function groupOf(key){
+  if(key.startsWith('head'))return '頭';
+  if(key.startsWith('neck'))return '頸';
+  if(key.startsWith('trunk'))return '軀幹';
+  if(key==='genit')return '生殖器';
+  if(key.startsWith('butt'))return '臀';
+  if(key.startsWith('ua'))return '上臂';
+  if(key.startsWith('fa'))return '前臂';
+  if(key.startsWith('hand'))return '手';
+  if(key.startsWith('thigh'))return '大腿';
+  if(key.startsWith('leg'))return '小腿';
+  if(key.startsWith('foot'))return '足';
+  return key;
+}
+
+function buildRegionList(){
+  const R=[];
+  const add=(key,view,pct,shape)=>R.push({key,view,pct,shape});
+  // 前面（先大後小，重疊處後者覆蓋）
+  add('trunk_ant','front',P(13),G.trunk);
+  add('uaR_f','front',P(2),G.uaR);   add('uaL_f','front',P(2),G.uaL);
+  add('faR_f','front',P(1.5),G.faR); add('faL_f','front',P(1.5),G.faL);
+  add('thighR_f','front',PA('B'),G.thighR); add('thighL_f','front',PA('B'),G.thighL);
+  add('legR_f','front',PA('C'),G.legR);     add('legL_f','front',PA('C'),G.legL);
+  add('head_f','front',PA('A'),G.head);
+  add('neck_f','front',P(1),G.neck);
+  add('genit','front',P(1),G.genit);
+  add('handR_f','front',P(1.25),G.handR); add('handL_f','front',P(1.25),G.handL);
+  add('footR_f','front',P(1.75),G.footR); add('footL_f','front',P(1.75),G.footL);
+  // 背面
+  add('trunk_post','back',P(13),G.trunk);
+  add('uaR_b','back',P(2),G.uaR);   add('uaL_b','back',P(2),G.uaL);
+  add('faR_b','back',P(1.5),G.faR); add('faL_b','back',P(1.5),G.faL);
+  add('thighR_b','back',PA('B'),G.thighR); add('thighL_b','back',PA('B'),G.thighL);
+  add('legR_b','back',PA('C'),G.legR);     add('legL_b','back',PA('C'),G.legL);
+  add('head_b','back',PA('A'),G.head);
+  add('neck_b','back',P(1),G.neck);
+  add('buttR','back',P(2.5),G.buttR); add('buttL','back',P(2.5),G.buttL);
+  add('handR_b','back',P(1.25),G.handR); add('handL_b','back',P(1.25),G.handL);
+  add('footR_b','back',P(1.75),G.footR); add('footL_b','back',P(1.75),G.footL);
+  return R;
+}
+const REGIONS=buildRegionList();
+
+// ---- 建立每個 view 的狀態 ----
+function buildView(view){
+  const regions=REGIONS.filter(r=>r.view===view).map(r=>({...r,totalCount:0}));
+  const N=VW*VH;
+  const regionId=new Int16Array(N).fill(-1);
+
+  const tmp=document.createElement('canvas');tmp.width=VW;tmp.height=VH;
+  const t=tmp.getContext('2d',{willReadFrequently:true});
+  // 逐區寫入 id（後者覆蓋前者重疊像素）
+  regions.forEach((r,id)=>{
+    t.clearRect(0,0,VW,VH);
+    t.beginPath(); r.shape(t); t.fillStyle='#fff'; t.fill();
+    const d=t.getImageData(0,0,VW,VH).data;
+    for(let p=0;p<N;p++){ if(d[p*4+3]>128) regionId[p]=id; }
+  });
+  // 由最終 regionId 重算各區像素總數（含覆蓋後的真正歸屬）
+  const totals=new Array(regions.length).fill(0);
+  for(let p=0;p<N;p++){const id=regionId[p]; if(id>=0)totals[id]++;}
+  regions.forEach((r,id)=>r.totalCount=totals[id]);
+
+  // 底圖（剪影外觀）
+  const bc=document.createElement('canvas');bc.width=VW;bc.height=VH;
+  const b=bc.getContext('2d',{willReadFrequently:true});
+  regions.forEach(r=>{ b.beginPath(); r.shape(b); b.fillStyle=SKIN; b.fill(); });
+  b.lineWidth=1; b.strokeStyle=OUTLINE;
+  regions.forEach(r=>{ b.beginPath(); r.shape(b); b.stroke(); });
+  const baseData=b.getImageData(0,0,VW,VH);
+
+  const canvas=document.getElementById('cv_'+view);
+  canvas.width=VW; canvas.height=VH;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+
+  return {view,canvas,ctx,regionId,baseData,regions,
+          painted:new Uint8Array(N),cursor:null,down:false,last:null};
+}
+
+let VIEWS=[];
+let brushSize=8, eraser=false, dirty=true;
+
+// ---- 繪製 ----
+function renderView(v){
+  const out=v.ctx.createImageData(VW,VH);
+  out.data.set(v.baseData.data);
+  const od=out.data, pa=v.painted, N=VW*VH;
+  for(let p=0;p<N;p++){
+    if(pa[p]){
+      const i=p*4;
+      od[i]  =(od[i]*0.25+220*0.75)|0;
+      od[i+1]=(od[i+1]*0.25+50*0.75)|0;
+      od[i+2]=(od[i+2]*0.25+50*0.75)|0;
+      od[i+3]=255;
+    }
+  }
+  v.ctx.putImageData(out,0,0);
+  if(v.cursor){
+    v.ctx.beginPath();
+    v.ctx.arc(v.cursor.x,v.cursor.y,brushSize,0,Math.PI*2);
+    v.ctx.strokeStyle=eraser?'rgba(70,70,70,.9)':'rgba(180,30,30,.9)';
+    v.ctx.lineWidth=1.5; v.ctx.stroke();
+  }
+}
+
+// ---- 塗色 ----
+function stamp(v,x,y){
+  const r=brushSize, r2=r*r, val=eraser?0:1;
+  const x0=Math.max(0,(x-r)|0), x1=Math.min(VW-1,Math.ceil(x+r));
+  const y0=Math.max(0,(y-r)|0), y1=Math.min(VH-1,Math.ceil(y+r));
+  for(let yy=y0;yy<=y1;yy++)for(let xx=x0;xx<=x1;xx++){
+    const dx=xx-x,dy=yy-y;
+    if(dx*dx+dy*dy<=r2){
+      const p=yy*VW+xx;
+      if(v.regionId[p]>=0) v.painted[p]=val;
+    }
+  }
+}
+function paintLine(v,x0,y0,x1,y1){
+  const dist=Math.hypot(x1-x0,y1-y0);
+  const steps=Math.max(1,Math.ceil(dist/(brushSize*0.5)));
+  for(let s=0;s<=steps;s++){const t=s/steps;stamp(v,x0+(x1-x0)*t,y0+(y1-y0)*t);}
+}
+
+// ---- 統計 ----
+function computeStats(){
+  const age=ageData[currentAge];
+  let total=0; const groups={};
+  VIEWS.forEach(v=>{
+    const cnt=new Array(v.regions.length).fill(0);
+    const pa=v.painted,rid=v.regionId,N=VW*VH;
+    for(let p=0;p<N;p++){ if(pa[p]){const id=rid[p]; if(id>=0)cnt[id]++;} }
+    v.regions.forEach((r,id)=>{
+      if(r.totalCount>0 && cnt[id]>0){
+        const contrib=(cnt[id]/r.totalCount)*r.pct(age);
+        total+=contrib;
+        const g=groupOf(r.key);
+        groups[g]=(groups[g]||0)+contrib;
+      }
+    });
+  });
+  document.getElementById('totalNum').textContent=total.toFixed(1);
+
+  const rows=Object.entries(groups).filter(([,v])=>v>0.04).sort((a,b)=>b[1]-a[1]);
+  const tb=document.getElementById('bdBody'),emp=document.getElementById('bdEmpty');
+  tb.innerHTML='';
+  if(!rows.length){emp.style.display='';}
+  else{
+    emp.style.display='none';
+    const max=rows[0][1];
+    rows.forEach(([g,val])=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${g}</td>`+
+        `<td style="width:45%"><div class="bar" style="width:${Math.max(4,val/max*100)}%"></div></td>`+
+        `<td class="val">${val.toFixed(1)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+}
+
+// ---- rAF 排程 ----
+function schedule(){ dirty=true; }
+function loop(){
+  if(dirty){ dirty=false; VIEWS.forEach(renderView); computeStats(); }
+  requestAnimationFrame(loop);
+}
+
+// ---- 座標轉換 ----
+function xy(v,e){
+  const rect=v.canvas.getBoundingClientRect();
+  return {x:(e.clientX-rect.left)*(VW/rect.width),
+          y:(e.clientY-rect.top)*(VH/rect.height)};
+}
+function bindCanvas(v){
+  const cv=v.canvas;
+  cv.addEventListener('pointerdown',e=>{
+    cv.setPointerCapture(e.pointerId);
+    v.down=true; const p=xy(v,e); v.last=p; v.cursor=p;
+    stamp(v,p.x,p.y); schedule();
+  });
+  cv.addEventListener('pointermove',e=>{
+    const p=xy(v,e); v.cursor=p;
+    if(v.down){ paintLine(v,v.last.x,v.last.y,p.x,p.y); v.last=p; }
+    schedule();
+  });
+  const up=e=>{ v.down=false; v.last=null; schedule(); };
+  cv.addEventListener('pointerup',up);
+  cv.addEventListener('pointercancel',up);
+  cv.addEventListener('pointerleave',e=>{ v.cursor=null; schedule(); });
+}
+
+// ---- UI 綁定 ----
+function buildAgeButtons(){
+  const box=document.getElementById('ages');
+  ageList.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.innerHTML=`${a.t}<small>${a.s}</small>`;
+    btn.dataset.k=a.k;
+    if(a.k===currentAge)btn.classList.add('on');
+    btn.onclick=()=>{
+      currentAge=a.k;
+      [...box.children].forEach(c=>c.classList.toggle('on',c.dataset.k===a.k));
+      updateAgeRef(); schedule();
+    };
+    box.appendChild(btn);
+  });
+  updateAgeRef();
+}
+function updateAgeRef(){
+  const a=ageData[currentAge];
+  document.getElementById('ageref').innerHTML=
+    `目前年齡別 — 頭 <b>${(2*a.A).toFixed(1)}%</b> · `+
+    `單側大腿 <b>${(2*a.B).toFixed(1)}%</b> · `+
+    `單側小腿 <b>${(2*a.C).toFixed(1)}%</b>`;
+}
+
+document.getElementById('toolseg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  eraser=b.dataset.tool==='erase';
+  [...e.currentTarget.children].forEach(c=>c.classList.toggle('on',c===b));
+  schedule();
+});
+const brush=document.getElementById('brush'),brushv=document.getElementById('brushv');
+brush.addEventListener('input',()=>{brushSize=+brush.value;brushv.textContent=brush.value;schedule();});
+document.getElementById('clearFront').onclick=()=>{VIEWS[0].painted.fill(0);schedule();};
+document.getElementById('clearBack').onclick =()=>{VIEWS[1].painted.fill(0);schedule();};
+document.getElementById('clearAll').onclick  =()=>{VIEWS.forEach(v=>v.painted.fill(0));schedule();};
+
+// 鍵盤快捷：E 切換橡皮擦、[ ] 調筆刷
+window.addEventListener('keydown',e=>{
+  if(e.key==='e'||e.key==='E'){
+    eraser=!eraser;
+    document.querySelectorAll('#toolseg button').forEach(b=>b.classList.toggle('on',(b.dataset.tool==='erase')===eraser));
+    schedule();
+  }else if(e.key==='['){ brush.value=Math.max(3,brushSize-1);brush.dispatchEvent(new Event('input')); }
+  else if(e.key===']'){ brush.value=Math.min(22,brushSize+1);brush.dispatchEvent(new Event('input')); }
+});
+
+// ---- 啟動 ----
+buildAgeButtons();
+VIEWS=[buildView('front'),buildView('back')];
+VIEWS.forEach(bindCanvas);
+schedule();
+loop();
+</script>
+</body>
+</html>

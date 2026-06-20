@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>臨床小工具 · med-tools</title>
+<style>
+  :root{
+    --bg:#F5EEE1; --panel:#FFFBF3; --ink:#3E372E; --muted:#8A7E6E;
+    --line:#E4D8C4; --accent:#C2703D; --accent-soft:#F0DBC6;
+    --shadow:0 2px 10px rgba(120,90,50,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Helvetica Neue",Arial,sans-serif;}
+  .wrap{max-width:680px;margin:0 auto;padding:32px 18px 60px;}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:.5px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 28px;}
+  a.tool{display:block;text-decoration:none;color:inherit;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px;transition:.12s;}
+  a.tool:hover{border-color:var(--accent);transform:translateY(-1px);}
+  a.tool .t{font-size:18px;font-weight:600;}
+  a.tool .t .emoji{margin-right:8px;}
+  a.tool .d{color:var(--muted);font-size:13.5px;margin-top:5px;line-height:1.5;}
+  a.tool .go{color:var(--accent);font-size:13px;margin-top:10px;font-weight:600;}
+  footer{color:var(--muted);font-size:12px;margin-top:30px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>臨床小工具</h1>
+  <p class="sub">自包含、純前端、手機/iPad 可離線開的臨床輔助工具</p>
+
+  <a class="tool" href="./BSA_calculator.html">
+    <div class="t"><span class="emoji">🧮</span>BSA 體表面積估算</div>
+    <div class="d">滑鼠/手指塗色標示受影響皮膚 → 即時估計 %TBSA。採 Lund-Browder 分區年齡加權（嬰兒～成人 6 欄），可塗可擦，附完整對照表。</div>
+    <div class="go">開啟 →</div>
+  </a>
+
+  <footer>med-tools · 純前端、無後端、無追蹤</footer>
+</div>
+</body>
+</html>
