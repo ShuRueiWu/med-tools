@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surface Anatomy Body Map · 表面解剖標記</title>
+<style>
+  :root{
+    --bg:#fbf5ea; --panel:#fffdf8; --ink:#4b4036; --muted:#8a7d6d;
+    --line:#e8dcc7; --accent:#c0703a; --accent-soft:#f3e3d2;
+    --skin:#f4ddc4; --skin-stroke:#c79f78; --divider:#d8bb98; --feat:#7c6552;
+    --hover:#ffc88f; --sel:#e07a45; --sel-stroke:#b85a2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,"PingFang TC","Helvetica Neue",Arial,"Microsoft JhengHei",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    padding:22px clamp(12px,3vw,40px);
+  }
+  header h1{font-size:20px;margin:0 0 2px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  .wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:18px}
+  .figs{display:flex;gap:14px;flex-wrap:wrap;flex:1 1 480px;min-width:300px}
+  .figcard{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:10px 8px 6px;box-shadow:0 4px 14px rgba(120,90,50,.06);flex:1 1 220px;
+  }
+  .figcard h2{font-size:13px;font-weight:600;text-align:center;margin:2px 0 4px;color:var(--ink)}
+  .figcard .sidehint{text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px}
+  svg.body{width:100%;height:auto;display:block;touch-action:manipulation}
+  .outline{fill:none;stroke:var(--skin-stroke);stroke-width:1.6;stroke-linejoin:round;
+           stroke-linecap:round;pointer-events:none}
+  .region{fill:transparent;pointer-events:all;cursor:pointer;
+          stroke:var(--divider);stroke-width:.7;transition:fill .12s ease}
+  .region.ear{fill:var(--skin)}
+  .region.plain{stroke:none}
+  .region:hover{fill:var(--hover)!important}
+  .region.selected{fill:var(--sel)!important;stroke:var(--sel-stroke);stroke-width:1}
+  .sidemark{font:600 11px sans-serif;fill:var(--muted)}
+  .feature{fill:none;stroke:var(--feat);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .eyeball{fill:#fffaf3;stroke:var(--feat);stroke-width:.9;pointer-events:none}
+  .pupil{fill:var(--feat);pointer-events:none}
+
+  /* panel */
+  .panel{flex:1 1 300px;min-width:280px;background:var(--panel);border:1px solid var(--line);
+         border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(120,90,50,.06)}
+  .panel h2{font-size:15px;margin:0 0 2px}
+  .readout{min-height:34px;background:var(--accent-soft);border-radius:10px;padding:8px 12px;
+           margin:8px 0 12px;font-size:14px}
+  .readout .en{font-weight:600}
+  .readout .zh{color:var(--muted);font-size:12px}
+  .readout .empty{color:var(--muted);font-weight:400}
+  .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .listhead .count{font-size:12px;color:var(--muted)}
+  ul.sel{list-style:none;margin:0 0 12px;padding:0;max-height:230px;overflow:auto}
+  ul.sel li{display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--line);
+            border-radius:9px;margin-bottom:6px;font-size:13px;background:#fff}
+  ul.sel li .dot{width:10px;height:10px;border-radius:50%;background:var(--sel);flex:0 0 auto}
+  ul.sel li .txt{flex:1;min-width:0}
+  ul.sel li .txt b{font-weight:600}
+  ul.sel li .txt small{color:var(--muted);display:block;font-size:11px}
+  ul.sel li button{border:none;background:none;color:var(--muted);font-size:16px;cursor:pointer;
+                   line-height:1;padding:2px 4px;border-radius:6px}
+  ul.sel li button:hover{background:var(--accent-soft);color:var(--accent)}
+  .empty-list{color:var(--muted);font-size:13px;padding:6px 2px 12px}
+  .gen{font-size:12px;color:var(--muted);margin:0 0 4px}
+  textarea#out{width:100%;min-height:74px;border:1px solid var(--line);border-radius:10px;
+               padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink);resize:vertical;
+               background:#fff;line-height:1.5}
+  .btns{display:flex;gap:8px;margin-top:10px}
+  button.act{flex:1;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:13px;
+             padding:9px;border-radius:10px;cursor:pointer;font-family:inherit}
+  button.act:hover{background:var(--accent-soft)}
+  button.act.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.act.primary:hover{background:#a85c2c}
+  .note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
+  @media(max-width:560px){.figcard{flex:1 1 100%}}
+
+  /* enlarged hand/foot detail */
+  .detailsec{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+             padding:16px;box-shadow:0 4px 14px rgba(120,90,50,.06)}
+  .detailhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:2px}
+  .detailhead h2{font-size:15px;margin:0}
+  .sidetoggle{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .sidetoggle button{border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;
+                     padding:5px 13px;border-radius:8px;cursor:pointer}
+  .sidetoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .detailnote{font-size:11px;color:var(--muted);margin:4px 0 12px}
+  .detail-wrap{display:flex;gap:14px;flex-wrap:wrap}
+  .dcard{flex:1 1 180px;min-width:158px;border:1px solid var(--line);border-radius:12px;padding:8px 6px 4px}
+  .dcard h3{font-size:12px;font-weight:600;text-align:center;margin:2px 0 6px;color:var(--ink)}
+  .region.solid{fill:var(--skin);stroke:var(--skin-stroke);stroke-width:.9}
+  .region.solid.nail{fill:#fff3df}
+</style>
+</head>
+<body>
+<header>
+  <h1>Surface Anatomy Body Map <span style="font-weight:400;font-size:14px;color:var(--muted)">表面解剖標記</span></h1>
+  <p>點擊部位即標記病灶（傷口 / 皮膚感染 / 異位性皮膚炎），右側即時產生英文部位清單。再次點擊可取消。</p>
+</header>
+
+<div class="wrap">
+  <div class="figs">
+    <div class="figcard">
+      <h2>Anterior view · 前面</h2>
+      <div class="sidehint">左＝病人右 (R)　·　右＝病人左 (L)</div>
+      <svg class="body" id="svgFront" viewBox="0 0 240 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="figcard">
+      <h2>Posterior view · 背面</h2>
+      <div class="sidehint">左＝病人左 (L)　·　右＝病人右 (R)</div>
+      <svg class="body" id="svgBack" viewBox="0 0 240 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Current region · 目前部位</h2>
+    <div class="readout" id="readout"><span class="empty">滑過或點擊人像…</span></div>
+
+    <div class="listhead">
+      <h2 style="margin:0;font-size:15px">Marked lesions · 已標記</h2>
+      <span class="count" id="count">0</span>
+    </div>
+    <ul class="sel" id="sel"></ul>
+    <div class="empty-list" id="emptyList">尚未標記任何部位。</div>
+
+    <p class="gen">Generated description（可複製進病歷）：</p>
+    <textarea id="out" readonly placeholder="Lesions noted at: …"></textarea>
+    <div class="btns">
+      <button class="act primary" id="copyBtn">複製文字</button>
+      <button class="act" id="clearBtn">全部清除</button>
+    </div>
+    <p class="note">
+      側別依解剖學標準（病人本人左右）。前視圖中病人右側顯示於畫面左側，後視圖則左右與畫面一致。<br>
+      純前端、離線可用；無外部資源。屈側皺褶（antecubital / popliteal fossa）已獨立切出，方便標記 AD 好發處。
+    </p>
+  </div>
+</div>
+
+<div class="detailsec">
+  <div class="detailhead">
+    <h2>Digit &amp; sole detail · 手足細部（放大）</h2>
+    <div class="sidetoggle">側別 Side：
+      <button data-dside="R" class="on">Right 右</button>
+      <button data-dside="L">Left 左</button>
+    </div>
+  </div>
+  <p class="detailnote">點擊分區即標記。<b>頭側・手・足</b>跟隨上方 R/L 切換；<b>頭頂俯視</b>左右並列、側別固定（方便頭痛兩側比對）。含頭部分區、指甲・甲周・指腹、遠/中/近節指骨、掌面 vs 背面。</p>
+  <div class="detail-wrap">
+    <div class="dcard"><h3>Head · lateral 頭側</h3><svg class="body" id="dHeadL" viewBox="0 0 190 200" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="dcard"><h3>Head · top 頭頂俯視</h3><svg class="body" id="dHeadS" viewBox="0 0 190 210" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="dcard"><h3>Hand · dorsal 手背</h3><svg class="body" id="dHandD" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="dcard"><h3>Hand · palmar 手掌</h3><svg class="body" id="dHandP" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="dcard"><h3>Foot · dorsal 足背</h3><svg class="body" id="dFootD" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="dcard"><h3>Foot · plantar 足底</h3><svg class="body" id="dFootP" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  </div>
+</div>
+
+<script>
+// ---- shape helpers --------------------------------------------------------
+function shapeSVG(s){
+  if(s.t==='rect')   return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.rx||0}"/>`;
+  if(s.t==='ellipse')return `<ellipse cx="${s.cx}" cy="${s.cy}" rx="${s.rx}" ry="${s.ry}"/>`;
+  if(s.t==='poly')   return `<polygon points="${s.pts}"/>`;
+}
+function mirror(s){            // reflect a shape across x=120
+  if(s.t==='rect')    return {...s, x:240 - s.x - s.w};
+  if(s.t==='ellipse') return {...s, cx:240 - s.cx};
+  if(s.t==='poly')    return {...s, pts:s.pts.split(' ').map(p=>{
+                          const [x,y]=p.split(',').map(Number); return (240-x)+','+y;}).join(' ')};
+}
+
+// ---- region data ----------------------------------------------------------
+// Regions are coarse bands; they get clipped to the smooth body silhouette so
+// their edges conform to the body contour. central=side 'C'; sided geometry is
+// for VIEWER-LEFT and auto-mirrored. y-bands tile so dividers line up.
+const FRONT_CENTRAL = [
+  {id:'scalp',    en:'Scalp',            zh:'頭皮',          shape:{t:'rect',x:86,y:14,w:68,h:32}},
+  {id:'forehead', en:'Forehead',         zh:'額部',          shape:{t:'rect',x:86,y:46,w:68,h:14}},
+  {id:'nose',     en:'Nose',             zh:'鼻',            shape:{t:'rect',x:113,y:64,w:14,h:16}},
+  {id:'perioral', en:'Perioral',         zh:'口周',          shape:{t:'rect',x:107,y:80,w:26,h:7}},
+  {id:'chin',     en:'Chin',             zh:'下巴',          shape:{t:'rect',x:108,y:86,w:24,h:7}},
+  {id:'aneck',    en:'Anterior neck',    zh:'前頸',          shape:{t:'rect',x:80,y:93,w:80,h:16}},
+  {id:'inguinal', en:'Inguinal / Groin', zh:'鼠蹊/腹股溝',    shape:{t:'rect',x:82,y:245,w:76,h:33}},
+];
+const FRONT_SIDED = [
+  {id:'ear',        en:'Ear',               zh:'耳',         shape:{t:'ellipse',cx:92,cy:63,rx:5.5,ry:10}},
+  {id:'periorbital',en:'Periorbital',       zh:'眼周',       shape:{t:'rect',x:98,y:62,w:13,h:9}},
+  {id:'cheek',      en:'Cheek',             zh:'臉頰',       shape:{t:'rect',x:95,y:71,w:16,h:13}},
+  {id:'shoulder',   en:'Shoulder (deltoid)',zh:'肩(三角肌)', shape:{t:'rect',x:50,y:108,w:40,h:38}},
+  {id:'chest',      en:'Chest',             zh:'胸部',       shape:{t:'rect',x:80,y:109,w:40,h:71}},
+  {id:'abdup',      en:'Upper abdomen',     zh:'上腹',       shape:{t:'rect',x:80,y:180,w:40,h:33}},
+  {id:'abdlow',     en:'Lower abdomen',     zh:'下腹',       shape:{t:'rect',x:80,y:213,w:40,h:32}},
+  {id:'upperarm',   en:'Upper arm',         zh:'上臂',       shape:{t:'rect',x:50,y:146,w:36,h:64}},
+  {id:'cubital',    en:'Antecubital fossa', zh:'肘窩(屈側)', shape:{t:'rect',x:50,y:210,w:35,h:24}},
+  {id:'forearm',    en:'Forearm',           zh:'前臂',       shape:{t:'rect',x:46,y:234,w:38,h:66}},
+  {id:'palm',       en:'Palm',              zh:'手掌',       shape:{t:'rect',x:44,y:300,w:40,h:48}},
+  {id:'thumb',      en:'Thumb',             zh:'拇指',       shape:{t:'rect',x:38,y:330,w:14,h:24}},
+  {id:'index',      en:'Index finger',      zh:'食指',       shape:{t:'rect',x:50,y:348,w:10,h:17}},
+  {id:'middle',     en:'Middle finger',     zh:'中指',       shape:{t:'rect',x:60,y:348,w:8,h:18}},
+  {id:'ring',       en:'Ring finger',       zh:'無名指',     shape:{t:'rect',x:68,y:348,w:8,h:16}},
+  {id:'little',     en:'Little finger',     zh:'小指',       shape:{t:'rect',x:75,y:349,w:8,h:10}},
+  {id:'thigh',      en:'Thigh',             zh:'大腿',       shape:{t:'rect',x:80,y:278,w:38,h:116}},
+  {id:'knee',       en:'Knee',              zh:'膝(前)',     shape:{t:'rect',x:80,y:394,w:38,h:28}},
+  {id:'shin',       en:'Shin (lower leg)',  zh:'小腿(脛前)', shape:{t:'rect',x:80,y:422,w:38,h:100}},
+  {id:'footdor',    en:'Foot dorsum',       zh:'足背',       shape:{t:'rect',x:78,y:520,w:42,h:32}},
+  {id:'gtoe',       en:'Great toe (hallux)',zh:'拇趾',       shape:{t:'rect',x:107,y:550,w:11,h:13}},
+  {id:'toe2',       en:'2nd toe',           zh:'第2趾',      shape:{t:'rect',x:100,y:552,w:8,h:11}},
+  {id:'toe3',       en:'3rd toe',           zh:'第3趾',      shape:{t:'rect',x:94,y:552,w:7,h:11}},
+  {id:'toe4',       en:'4th toe',           zh:'第4趾',      shape:{t:'rect',x:87,y:552,w:7,h:11}},
+  {id:'toe5',       en:'5th toe (little)',  zh:'小趾',       shape:{t:'rect',x:79,y:552,w:9,h:11}},
+];
+
+const BACK_CENTRAL = [
+  {id:'occiput',  en:'Occiput (post. scalp)', zh:'後腦/枕部', shape:{t:'rect',x:86,y:14,w:68,h:79}},
+  {id:'nape',     en:'Nape (post. neck)',     zh:'後頸/項部', shape:{t:'rect',x:80,y:93,w:80,h:16}},
+  {id:'sacrum',   en:'Sacrum',                zh:'薦部',      shape:{t:'rect',x:80,y:220,w:80,h:30}},
+];
+const BACK_SIDED = [
+  {id:'ear',      en:'Ear',                  zh:'耳',        shape:{t:'ellipse',cx:92,cy:63,rx:5.5,ry:10}},
+  {id:'shoulderp',en:'Shoulder (posterior)', zh:'肩(後)',    shape:{t:'rect',x:50,y:108,w:40,h:38}},
+  {id:'ubacks',   en:'Upper back',           zh:'上背',      shape:{t:'rect',x:80,y:109,w:40,h:61}},
+  {id:'lbacks',   en:'Lower back / Lumbar',  zh:'下背/腰',    shape:{t:'rect',x:80,y:170,w:40,h:50}},
+  {id:'uarmp',    en:'Posterior upper arm',  zh:'上臂(後)',  shape:{t:'rect',x:50,y:146,w:36,h:64}},
+  {id:'elbow',    en:'Elbow (olecranon)',    zh:'肘(伸側)',  shape:{t:'rect',x:50,y:210,w:35,h:24}},
+  {id:'forearmp', en:'Posterior forearm',    zh:'前臂(後)',  shape:{t:'rect',x:46,y:234,w:38,h:66}},
+  {id:'dorsum',   en:'Hand dorsum',          zh:'手背',      shape:{t:'rect',x:44,y:300,w:40,h:48}},
+  {id:'thumb',    en:'Thumb',                zh:'拇指',      shape:{t:'rect',x:38,y:330,w:14,h:24}},
+  {id:'index',    en:'Index finger',         zh:'食指',      shape:{t:'rect',x:50,y:348,w:10,h:17}},
+  {id:'middle',   en:'Middle finger',        zh:'中指',      shape:{t:'rect',x:60,y:348,w:8,h:18}},
+  {id:'ring',     en:'Ring finger',          zh:'無名指',    shape:{t:'rect',x:68,y:348,w:8,h:16}},
+  {id:'little',   en:'Little finger',        zh:'小指',      shape:{t:'rect',x:75,y:349,w:8,h:10}},
+  {id:'buttock',  en:'Buttock',              zh:'臀部',      shape:{t:'rect',x:82,y:250,w:36,h:44}},
+  {id:'thighp',   en:'Posterior thigh',      zh:'大腿(後)',  shape:{t:'rect',x:80,y:294,w:38,h:100}},
+  {id:'popliteal',en:'Popliteal fossa',      zh:'膕窩(屈側)',shape:{t:'rect',x:80,y:394,w:38,h:28}},
+  {id:'calf',     en:'Calf',                 zh:'小腿(腓腸)',shape:{t:'rect',x:80,y:422,w:38,h:100}},
+  {id:'heel',     en:'Heel / sole',          zh:'足跟/足底', shape:{t:'rect',x:80,y:520,w:38,h:32}},
+  {id:'gtoe',     en:'Great toe (hallux)',   zh:'拇趾',      shape:{t:'rect',x:107,y:550,w:11,h:13}},
+  {id:'toe2',     en:'2nd toe',              zh:'第2趾',     shape:{t:'rect',x:100,y:552,w:8,h:11}},
+  {id:'toe3',     en:'3rd toe',              zh:'第3趾',     shape:{t:'rect',x:94,y:552,w:7,h:11}},
+  {id:'toe4',     en:'4th toe',              zh:'第4趾',     shape:{t:'rect',x:87,y:552,w:7,h:11}},
+  {id:'toe5',     en:'5th toe (little)',     zh:'小趾',      shape:{t:'rect',x:79,y:552,w:9,h:11}},
+];
+
+// side resolution: front → viewerLeft=Right ; back → viewerLeft=Left
+function buildRegions(view){
+  const central = view==='front'?FRONT_CENTRAL:BACK_CENTRAL;
+  const sided   = view==='front'?FRONT_SIDED  :BACK_SIDED;
+  const leftLabel  = view==='front'?'R':'L';   // viewer-left shape's anatomical side
+  const rightLabel = view==='front'?'L':'R';
+  const out=[];
+  central.forEach(r=> out.push({...r, side:'C', view, key:`${view}|${r.id}`}));
+  sided.forEach(r=>{
+    out.push({...r, side:leftLabel,  view, key:`${view}|${r.id}|${leftLabel}`, shape:r.shape});
+    out.push({...r, side:rightLabel, view, key:`${view}|${r.id}|${rightLabel}`, shape:mirror(r.shape)});
+  });
+  return out;
+}
+
+// ---- smooth body silhouette ----------------------------------------------
+// left half traced top→crotch; right half = mirror+reverse → one clean outline,
+// no centre seam.  Same contour for both views.
+const P0=[120,18];
+const SEG=[
+  // head & neck
+  {c1:[103,18], c2:[92,33],  p:[92,53]},   {c1:[92,70],  c2:[101,85], p:[108,92]},
+  {c1:[109,95], c2:[109,100],p:[109,104]}, {c1:[102,106],c2:[95,108], p:[88,110]},
+  // shoulder & upper/forearm (outer)
+  {c1:[78,111], c2:[68,117], p:[62,128]},  {c1:[58,136], c2:[56,144], p:[56,154]},
+  {c1:[55,172], c2:[54,192], p:[55,210]},  {c1:[55,240], c2:[53,272], p:[52,300]},
+  // hand: outer palm → thumb → 4 finger bumps → inner palm (short, full digits)
+  {c1:[48,308], c2:[46,320], p:[47,332]},  {c1:[43,336], c2:[40,344], p:[43,351]},
+  {c1:[47,353], c2:[50,350], p:[51,344]},  {c1:[52,351], c2:[53,357], p:[56,360]},
+  {c1:[58,361], c2:[60,357], p:[60,351]},  {c1:[61,357], c2:[63,361], p:[64,363]},
+  {c1:[66,364], c2:[67,358], p:[68,352]},  {c1:[69,357], c2:[70,360], p:[71,361]},
+  {c1:[73,362], c2:[74,357], p:[75,352]},  {c1:[76,356], c2:[77,357], p:[78,355]},
+  {c1:[81,351], c2:[82,340], p:[81,330]},  {c1:[80,318], c2:[78,306], p:[76,300]},
+  // inner forearm/upper arm up to armpit
+  {c1:[77,285], c2:[78,255], p:[79,233]},  {c1:[80,212], c2:[81,188], p:[84,168]},
+  {c1:[86,160], c2:[88,154], p:[91,152]},
+  // torso flank
+  {c1:[94,166], c2:[92,186], p:[90,206]},  {c1:[89,220], c2:[89,234], p:[92,248]},
+  {c1:[94,258], c2:[96,266], p:[98,272]},
+  // leg outer
+  {c1:[92,286], c2:[86,304], p:[84,326]},  {c1:[83,352], c2:[83,380], p:[85,402]},
+  {c1:[86,432], c2:[87,470], p:[88,506]},  {c1:[88,517], c2:[87,525], p:[86,531]},
+  // foot with 5 toe bumps (5th lateral → great toe medial), pointing down
+  {c1:[83,541], c2:[80,549], p:[80,554]},  {c1:[80,558], c2:[81,561], p:[84,560]},
+  {c1:[86,561], c2:[86,556], p:[87,553]},  {c1:[88,558], c2:[89,561], p:[91,561]},
+  {c1:[93,561], c2:[93,556], p:[94,553]},  {c1:[95,558], c2:[96,561], p:[98,561]},
+  {c1:[100,561],c2:[100,556],p:[101,553]}, {c1:[102,558],c2:[103,560],p:[105,559]},
+  {c1:[107,560],c2:[107,555],p:[108,552]}, {c1:[110,557],c2:[112,558],p:[113,555]},
+  {c1:[115,551],c2:[115,543],p:[112,538]}, {c1:[108,533],c2:[104,531],p:[101,531]},
+  // leg inner up to crotch
+  {c1:[100,524],c2:[101,514],p:[101,505]}, {c1:[104,470],c2:[106,432],p:[108,406]},
+  {c1:[110,380],c2:[112,352],p:[114,322]}, {c1:[116,302],c2:[118,286],p:[119,274]},
+  {L:[120,272]},
+];
+function mx(pt){ return [240-pt[0], pt[1]]; }       // mirror across x=120
+function pair(pt){ return pt[0]+','+pt[1]; }
+function bodyOutline(){
+  let d = `M${pair(P0)} `;
+  SEG.forEach(s=> d += s.L ? `L${pair(s.L)} ` : `C${pair(s.c1)} ${pair(s.c2)} ${pair(s.p)} `);
+  // right side: walk segments in reverse, mirrored, swapping control points
+  const pts=[P0, ...SEG.map(s=> s.L||s.p)];
+  for(let i=SEG.length;i>=1;i--){
+    const s=SEG[i-1], target=mx(pts[i-1]);
+    d += s.L ? `L${pair(target)} ` : `C${pair(mx(s.c2))} ${pair(mx(s.c1))} ${pair(target)} `;
+  }
+  return d+'Z';
+}
+const OUTLINE = bodyOutline();
+
+function defs(view){
+  return `
+<defs>
+  <linearGradient id="skin_${view}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f9e9d6"/><stop offset="1" stop-color="#eed6ba"/>
+  </linearGradient>
+  <filter id="soft_${view}" x="-20%" y="-10%" width="140%" height="120%">
+    <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#b98a55" flood-opacity="0.28"/>
+  </filter>
+  <clipPath id="body_${view}"><path d="${OUTLINE}"/></clipPath>
+</defs>`;
+}
+function closeTag(t){ return t==='poly'?'polygon>':t==='ellipse'?'ellipse>':'rect>'; }
+const PLAIN = new Set(['periorbital','cheek','nose','perioral','chin']);  // strokeless zones
+
+// decorative line-art face — front view only; pointer-events:none so clicks
+// pass through to the periorbital / nose / perioral regions beneath.
+function faceFeatures(view){
+  if(view!=='front') return '';
+  return `<g>
+    <path class="feature" d="M99,60.5 Q105,58 111,60"/>
+    <path class="feature" d="M129,60 Q135,58 141,60.5"/>
+    <ellipse class="eyeball" cx="105" cy="67" rx="6" ry="3.3"/>
+    <ellipse class="eyeball" cx="135" cy="67" rx="6" ry="3.3"/>
+    <circle class="pupil" cx="105" cy="67" r="1.7"/>
+    <circle class="pupil" cx="135" cy="67" r="1.7"/>
+    <path class="feature" d="M120,65 L118.5,75 Q120,77 122,75.3"/>
+    <path class="feature" d="M111,84 Q120,87.2 129,84"/>
+  </g>`;
+}
+
+function renderFigure(svgId, view){
+  const regs = buildRegions(view);
+  const svg = document.getElementById(svgId);
+  const lMark = view==='front'?'R':'L', rMark = view==='front'?'L':'R';
+  let bands='', ears='';
+  regs.forEach(r=>{
+    const sideTxt = r.side==='C'?'':(r.side==='R'?'Right ':'Left ');
+    const title = `${sideTxt}${r.en}（${r.zh}）`;
+    let cls='region';
+    if(r.id==='ear') cls+=' ear';
+    if(PLAIN.has(r.id)) cls+=' plain';   // facial-feature zones: no divider box, drawn art instead
+    const el = shapeSVG(r.shape).replace('/>',
+      ` class="${cls}" data-key="${r.key}" data-en="${r.en}" data-zh="${r.zh}" data-side="${r.side}"><title>${title}</title></`
+      + closeTag(r.shape.t));
+    if(r.id==='ear') ears+=el; else bands+=el;
+  });
+  svg.innerHTML = defs(view)
+    + `<path class="silhouette" d="${OUTLINE}" fill="url(#skin_${view})" filter="url(#soft_${view})"/>`
+    + `<g clip-path="url(#body_${view})">${bands}</g>`
+    + `<path class="outline" d="${OUTLINE}"/>`
+    + ears                                                   // ears sit on top of outline
+    + faceFeatures(view)                                     // decorative eyes/nose/mouth (front)
+    + `<text class="sidemark" x="14" y="16" text-anchor="middle">${lMark}</text>`
+    + `<text class="sidemark" x="226" y="16" text-anchor="middle">${rMark}</text>`;
+}
+
+renderFigure('svgFront','front');
+renderFigure('svgBack','back');
+
+// ---- enlarged digit / sole detail diagrams (schematic) --------------------
+// Filled rounded-rect zones (no clip). Side is applied at click time via the
+// R/L toggle, so each schematic is drawn once and serves both sides.
+function rZone(id,en,zh,x,y,w,h,nail){ return {id,en,zh,nail:!!nail,shape:{t:'rect',x,y,w,h,rx:nail?5:8}}; }
+function fingerD(pre,name,x,w,ys){ const [n,d,m,p,b]=ys; return [
+  rZone(pre+'-nail',name+' nail',name+'指甲',x,n,w,d-n,true),
+  rZone(pre+'-dist',name+' distal phalanx (dorsal)',name+'遠節背側',x,d,w,m-d),
+  rZone(pre+'-mid', name+' middle phalanx (dorsal)',name+'中節背側',x,m,w,p-m),
+  rZone(pre+'-prox',name+' proximal phalanx (dorsal)',name+'近節背側',x,p,w,b-p)]; }
+function fingerP(pre,name,x,w,ys){ const [t,m,p,b]=ys; return [
+  rZone(pre+'-pulp',name+' pulp / fingertip',name+'指腹/指尖',x,t,w,m-t),
+  rZone(pre+'-pmid',name+' middle phalanx (palmar)',name+'中節掌側',x,m,w,p-m),
+  rZone(pre+'-pprox',name+' proximal phalanx (palmar)',name+'近節掌側',x,p,w,b-p)]; }
+function toeD(pre,name,x,w,ys){ const [n,t,b]=ys; return [
+  rZone(pre+'-nail',name+' nail',name+'趾甲',x,n,w,t-n,true),
+  rZone(pre+'-toe', name+' (dorsal)',name+'背側',x,t,w,b-t)]; }
+
+const HAND_D = [
+  rZone('dorsum','Dorsum of hand (metacarpal)','手背(掌骨區)',52,168,104,94),
+  rZone('th-nail','Thumb nail','拇指甲',22,98,28,16,true),
+  rZone('th-dist','Thumb distal phalanx (dorsal)','拇指遠節背側',22,114,28,40),
+  rZone('th-prox','Thumb proximal phalanx (dorsal)','拇指近節背側',24,154,28,38),
+  ...fingerD('ix','Index',58,22,[48,64,92,128,172]),
+  ...fingerD('md','Middle',84,24,[34,50,82,122,172]),
+  ...fingerD('rg','Ring',112,22,[50,66,92,128,172]),
+  ...fingerD('lt','Little',138,18,[70,84,108,140,172]),
+];
+const HAND_P = [
+  rZone('thenar','Thenar eminence','大魚際',50,170,42,88),
+  rZone('cpalm','Central palm','掌心',92,184,28,74),
+  rZone('hypo','Hypothenar eminence','小魚際',120,170,38,88),
+  rZone('thp-pulp','Thumb pulp / tip','拇指指腹',22,110,28,44),
+  rZone('thp-prox','Thumb proximal phalanx (palmar)','拇指近節掌側',24,154,28,38),
+  ...fingerP('ixp','Index',58,22,[58,92,128,172]),
+  ...fingerP('mdp','Middle',84,24,[44,82,122,172]),
+  ...fingerP('rgp','Ring',112,22,[60,92,128,172]),
+  ...fingerP('ltp','Little',138,18,[80,108,140,172]),
+];
+const FOOT_D = [
+  rZone('fdorsum','Dorsum of foot','足背',40,120,124,96),
+  rZone('gt-nail','Great toe nail','拇趾甲',44,54,32,16,true),
+  rZone('gt-dist','Great toe distal phalanx (dorsal)','拇趾遠節背側',44,70,32,26),
+  rZone('gt-prox','Great toe proximal phalanx (dorsal)','拇趾近節背側',44,96,32,28),
+  ...toeD('t2','2nd toe',80,22,[82,96,124]),
+  ...toeD('t3','3rd toe',104,20,[86,98,124]),
+  ...toeD('t4','4th toe',126,18,[90,102,124]),
+  ...toeD('t5','5th toe',146,16,[96,106,124]),
+];
+const FOOT_P = [
+  rZone('heel','Heel (plantar)','足跟',58,168,84,56),
+  rZone('arch','Midfoot / arch (sole)','足弓/中足',54,128,92,42),
+  rZone('ball','Ball of foot (metatarsal heads)','蹠球(蹠骨頭)',44,94,112,36),
+  rZone('gt-pad','Great toe pad','拇趾趾腹',44,60,32,32),
+  rZone('t2-pad','2nd toe pad','第2趾腹',80,64,22,30),
+  rZone('t3-pad','3rd toe pad','第3趾腹',104,66,20,28),
+  rZone('t4-pad','4th toe pad','第4趾腹',126,68,18,26),
+  rZone('t5-pad','5th toe pad','第5趾腹',146,72,16,24),
+];
+
+// Head detail. Clipped to a head silhouette (opts.sil). r.side: 'L'/'R' = fixed
+// side; 'C' = central/no-side; absent = follows the R/L toggle.
+const HEAD_LAT = [
+  rZone('vertex','Vertex','頭頂',40,18,110,38),
+  rZone('frontal','Frontal','額/前額',27,56,56,42),
+  rZone('parietal','Parietal','頂',84,56,52,42),
+  rZone('occipital','Occipital','枕',130,56,38,64),
+  rZone('periorb','Periorbital / orbital','眼周/眶',27,98,52,46),
+  rZone('temporal','Temporal','顳',74,96,42,52),
+  rZone('suboccip','Suboccipital / nuchal','枕下/項',104,120,64,48),
+  rZone('periaur','Ear / peri-auricular','耳/耳周',90,116,20,28),
+];
+const HEAD_SUP = [
+  {...rZone('s-frL','Frontal','額',37,23,58,56), side:'L'},
+  {...rZone('s-frR','Frontal','額',95,23,58,56), side:'R'},
+  {...rZone('s-paL','Parietal','頂',37,79,58,50), side:'L'},
+  {...rZone('s-paR','Parietal','頂',95,79,58,50), side:'R'},
+  {...rZone('s-ocL','Occipital','枕',37,129,58,60), side:'L'},
+  {...rZone('s-ocR','Occipital','枕',95,129,58,60), side:'R'},
+  {...rZone('s-vtx','Vertex','巔頂',79,88,32,34), side:'C'},
+];
+
+function renderDetail(svgId, regions, opts){
+  opts=opts||{};
+  const svg=document.getElementById(svgId);
+  const clipped=!!opts.sil;
+  let body='';
+  regions.forEach(r=>{
+    const fixed = r.side ? ` data-fixedside="${r.side}"` : '';
+    const cls='region'+(clipped?'':' solid')+(r.nail?' nail':'');
+    const title=`${r.en}（${r.zh}）`;
+    body+=shapeSVG(r.shape).replace('/>',
+      ` class="${cls}" data-detail="1" data-key="${svgId}|${r.id}" data-en="${r.en}" data-zh="${r.zh}"${fixed}><title>${title}</title></`
+      + closeTag(r.shape.t));
+  });
+  if(clipped){
+    svg.innerHTML = `<defs><clipPath id="dc_${svgId}">${opts.sil}</clipPath></defs>`
+      + opts.sil.replace('/>',' fill="var(--skin)" stroke="var(--skin-stroke)" stroke-width="1.4"/>')
+      + `<g clip-path="url(#dc_${svgId})">${body}</g>`
+      + opts.sil.replace('/>',' fill="none" stroke="var(--skin-stroke)" stroke-width="1.4"/>')
+      + (opts.extra||'');
+  } else {
+    svg.innerHTML = body;
+  }
+}
+renderDetail('dHeadL',HEAD_LAT,{ sil:'<ellipse cx="95" cy="94" rx="68" ry="74"/>',
+  extra:'<path d="M27,108 l-9,6 l9,6" fill="none" stroke="var(--feat)" stroke-width="1.4"/>'
+       +'<ellipse cx="99" cy="120" rx="9" ry="13" fill="none" stroke="var(--feat)" stroke-width="1.2"/>'
+       +'<text x="9" y="98" font-size="9" fill="#8a7d6d">前</text>' });
+renderDetail('dHeadS',HEAD_SUP,{ sil:'<ellipse cx="95" cy="105" rx="58" ry="82"/>',
+  extra:'<path d="M95,15 l-7,10 l14,0 z" fill="var(--feat)"/>'
+       +'<text x="46" y="16" font-size="10" font-weight="600" fill="#8a7d6d">L</text>'
+       +'<text x="138" y="16" font-size="10" font-weight="600" fill="#8a7d6d">R</text>' });
+renderDetail('dHandD',HAND_D);
+renderDetail('dHandP',HAND_P);
+renderDetail('dFootD',FOOT_D);
+renderDetail('dFootP',FOOT_P);
+
+// ---- interaction ----------------------------------------------------------
+let detailSide='R';   // side applied to detail-diagram clicks
+const selected = new Map(); // key -> {en,zh,side}
+const readout = document.getElementById('readout');
+const selUl = document.getElementById('sel');
+const emptyList = document.getElementById('emptyList');
+const out = document.getElementById('out');
+const countEl = document.getElementById('count');
+
+function sideWord(s){ return s==='R'?'Right':s==='L'?'Left':''; }
+function phrase(r){       // for generated description
+  const sw = sideWord(r.side);
+  return sw ? sw+' '+r.en.charAt(0).toLowerCase()+r.en.slice(1) : r.en;
+}
+
+function showReadout(r){
+  const sw = sideWord(r.side);
+  readout.innerHTML = `<span class="en">${sw?sw+' ':''}${r.en}</span> `
+    + `<span class="zh">${sw?'('+(r.side==='R'?'右':'左')+') ':''}${r.zh}</span>`;
+}
+function clearReadout(){ readout.innerHTML = '<span class="empty">滑過或點擊人像…</span>'; }
+
+function refresh(){
+  countEl.textContent = selected.size;
+  selUl.innerHTML='';
+  emptyList.style.display = selected.size? 'none':'block';
+  const lines=[];
+  selected.forEach((r,key)=>{
+    const sw = sideWord(r.side);
+    const li=document.createElement('li');
+    li.innerHTML = `<span class="dot"></span>`
+      + `<span class="txt"><b>${sw?sw+' ':''}${r.en}</b><small>${sw?'('+(r.side==='R'?'右':'左')+') ':''}${r.zh}</small></span>`
+      + `<button title="移除" data-rm="${key}">×</button>`;
+    selUl.appendChild(li);
+    lines.push(phrase(r));
+  });
+  out.value = lines.length ? 'Lesions noted at: '+lines.join(', ')+'.' : '';
+  updateDetailHighlights();
+}
+
+// detail side: fixedside 'L'/'R' = locked; 'C' = central/no-side; else follow toggle
+function detSide(t){
+  const f=t.dataset.fixedside;
+  if(f==='C') return '';
+  if(f) return f;
+  return detailSide;
+}
+function regSide(t){ return t.dataset.detail==='1' ? detSide(t) : t.dataset.side; }
+function regKey(t){
+  if(t.dataset.detail!=='1') return t.dataset.key;
+  const s=detSide(t); return s ? t.dataset.key+'|'+s : t.dataset.key;
+}
+// detail shapes drawn once but selectable per side → reflect current state
+function updateDetailHighlights(){
+  document.querySelectorAll('.region[data-detail="1"]').forEach(el=>{
+    const s=detSide(el);
+    const key=s ? el.dataset.key+'|'+s : el.dataset.key;
+    el.classList.toggle('selected', selected.has(key));
+  });
+}
+
+document.querySelectorAll('svg.body').forEach(svg=>{
+  svg.addEventListener('mousemove',e=>{
+    const t=e.target.closest('.region'); if(!t) return;
+    showReadout({en:t.dataset.en,zh:t.dataset.zh,side:regSide(t)});
+  });
+  svg.addEventListener('mouseleave',clearReadout);
+  svg.addEventListener('click',e=>{
+    const t=e.target.closest('.region'); if(!t) return;
+    const key=regKey(t);
+    if(selected.has(key)){ selected.delete(key); if(t.dataset.detail!=='1') t.classList.remove('selected'); }
+    else{
+      selected.set(key,{en:t.dataset.en,zh:t.dataset.zh,side:regSide(t)});
+      if(t.dataset.detail!=='1') t.classList.add('selected');
+    }
+    refresh();
+  });
+});
+
+document.querySelectorAll('.sidetoggle button').forEach(b=>b.addEventListener('click',()=>{
+  detailSide=b.dataset.dside;
+  document.querySelectorAll('.sidetoggle button').forEach(x=>x.classList.toggle('on', x===b));
+  updateDetailHighlights();
+}));
+
+selUl.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-rm]'); if(!b) return;
+  const key=b.dataset.rm;
+  selected.delete(key);
+  document.querySelectorAll(`.region[data-key="${CSS.escape(key)}"]`).forEach(el=>el.classList.remove('selected'));
+  refresh();
+});
+
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  selected.clear();
+  document.querySelectorAll('.region.selected').forEach(el=>el.classList.remove('selected'));
+  refresh();
+});
+document.getElementById('copyBtn').addEventListener('click',async()=>{
+  if(!out.value) return;
+  try{ await navigator.clipboard.writeText(out.value); }
+  catch(_){ out.select(); document.execCommand('copy'); }
+  const b=document.getElementById('copyBtn'); const o=b.textContent;
+  b.textContent='已複製 ✓'; setTimeout(()=>b.textContent=o,1200);
+});
+
+refresh();
+</script>
+</body>
+</html>
