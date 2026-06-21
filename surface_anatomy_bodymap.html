@@ -20,15 +20,17 @@
   }
   header h1{font-size:20px;margin:0 0 2px}
   header p{margin:0;color:var(--muted);font-size:13px}
-  .wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:18px}
-  .figs{display:flex;gap:14px;flex-wrap:wrap;flex:1 1 480px;min-width:300px}
+  .layout{display:flex;gap:20px;align-items:flex-start;margin-top:18px}
+  .maincol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:20px}
+  .figs{display:flex;gap:14px;flex-wrap:wrap;width:100%}
   .figcard{
     background:var(--panel);border:1px solid var(--line);border-radius:16px;
-    padding:10px 8px 6px;box-shadow:0 4px 14px rgba(120,90,50,.06);flex:1 1 220px;
+    padding:10px 8px 6px;box-shadow:0 4px 14px rgba(120,90,50,.06);flex:0 0 auto;
   }
   .figcard h2{font-size:13px;font-weight:600;text-align:center;margin:2px 0 4px;color:var(--ink)}
   .figcard .sidehint{text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px}
   svg.body{width:100%;height:auto;display:block;touch-action:manipulation}
+  .figcard svg.body{width:180px;margin:0 auto}   /* main body figures (~66% of original) */
   .outline{fill:none;stroke:var(--skin-stroke);stroke-width:1.6;stroke-linejoin:round;
            stroke-linecap:round;pointer-events:none}
   .region{fill:transparent;pointer-events:all;cursor:pointer;
@@ -39,11 +41,16 @@
   .region.selected{fill:var(--sel)!important;stroke:var(--sel-stroke);stroke-width:1}
   .sidemark{font:600 11px sans-serif;fill:var(--muted)}
   .feature{fill:none;stroke:var(--feat);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-  .eyeball{fill:#fffaf3;stroke:var(--feat);stroke-width:.9;pointer-events:none}
-  .pupil{fill:var(--feat);pointer-events:none}
+  .feature.thin{stroke-width:.8}
+  .brow{fill:none;stroke:var(--feat);stroke-width:1.7;stroke-linecap:round;pointer-events:none}
+  .eyeball{fill:#fffaf3;stroke:var(--feat);stroke-width:.8;pointer-events:none}
+  .iris{fill:#9b7550;pointer-events:none}
+  .pupil{fill:#3c2f24;pointer-events:none}
+  .eyehl{fill:#fffaf3;pointer-events:none}
 
   /* panel */
-  .panel{flex:1 1 300px;min-width:280px;background:var(--panel);border:1px solid var(--line);
+  .panel{flex:0 0 300px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;
+         background:var(--panel);border:1px solid var(--line);
          border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(120,90,50,.06)}
   .panel h2{font-size:15px;margin:0 0 2px}
   .readout{min-height:34px;background:var(--accent-soft);border-radius:10px;padding:8px 12px;
@@ -65,7 +72,7 @@
   ul.sel li button:hover{background:var(--accent-soft);color:var(--accent)}
   .empty-list{color:var(--muted);font-size:13px;padding:6px 2px 12px}
   .gen{font-size:12px;color:var(--muted);margin:0 0 4px}
-  textarea#out{width:100%;min-height:74px;border:1px solid var(--line);border-radius:10px;
+  textarea#out{width:100%;min-height:150px;border:1px solid var(--line);border-radius:10px;
                padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink);resize:vertical;
                background:#fff;line-height:1.5}
   .btns{display:flex;gap:8px;margin-top:10px}
@@ -76,22 +83,57 @@
   button.act.primary:hover{background:#a85c2c}
   .note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
   @media(max-width:560px){.figcard{flex:1 1 100%}}
+  @media(max-width:640px){.layout{flex-direction:column}.panel{position:static;max-height:none;flex:1 1 auto;width:100%}}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(10px);
+         background:var(--ink);color:#fff;padding:9px 16px;border-radius:11px;font-size:13px;font-weight:600;
+         box-shadow:0 8px 24px rgba(60,40,20,.28);opacity:0;pointer-events:none;transition:.18s ease;
+         z-index:60;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .rm{color:#ffd9c2}
+  /* current-region label that follows the cursor */
+  .cursortip{position:fixed;z-index:70;pointer-events:none;background:var(--ink);color:#fff;
+        padding:5px 10px;border-radius:8px;font-size:12.5px;box-shadow:0 4px 14px rgba(60,40,20,.28);
+        opacity:0;transition:opacity .1s;white-space:nowrap;max-width:60vw}
+  .cursortip.show{opacity:1}
+  .cursortip b{font-weight:600}
+  .cursortip small{color:#ecd9c4;margin-left:6px;font-size:11px}
 
   /* enlarged hand/foot detail */
   .detailsec{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
              padding:16px;box-shadow:0 4px 14px rgba(120,90,50,.06)}
   .detailhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:2px}
   .detailhead h2{font-size:15px;margin:0}
-  .sidetoggle{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
-  .sidetoggle button{border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13px;
-                     padding:5px 13px;border-radius:8px;cursor:pointer}
-  .sidetoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .detailnote{font-size:11px;color:var(--muted);margin:4px 0 12px}
-  .detail-wrap{display:flex;gap:14px;flex-wrap:wrap}
-  .dcard{flex:1 1 180px;min-width:158px;border:1px solid var(--line);border-radius:12px;padding:8px 6px 4px}
-  .dcard h3{font-size:12px;font-weight:600;text-align:center;margin:2px 0 6px;color:var(--ink)}
+  .detailnote{font-size:11px;color:var(--muted);margin:4px 0 14px}
+  .dgroup{margin-top:14px}
+  details.dgroup>summary{font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;list-style:none;
+        border-left:3px solid var(--accent);background:var(--accent-soft);padding:7px 10px;border-radius:0 8px 8px 0}
+  details.dgroup>summary::-webkit-details-marker{display:none}
+  details.dgroup>summary::before{content:"▸ ";color:var(--accent);font-weight:700}
+  details.dgroup[open]>summary{margin-bottom:10px}
+  details.dgroup[open]>summary::before{content:"▾ "}
+  .drow{display:flex;gap:12px;flex-wrap:wrap}
+  /* fixed-width cards → uniform size, never stretch to fill a row (fixes oversized lone card) */
+  .dcard{flex:0 0 152px;border:1px solid var(--line);border-radius:12px;padding:8px 6px 4px}
+  .dcard h3{font-size:11.5px;font-weight:500;text-align:center;margin:2px 0 6px;color:var(--muted)}
+  .dcard h3 b{font-weight:700;color:var(--accent)}
   .region.solid{fill:var(--skin);stroke:var(--skin-stroke);stroke-width:.9}
   .region.solid.nail{fill:#fff3df}
+  /* head: reference diagram + clickable text list */
+  .headrow .headrefcard{flex:0 0 300px}
+  .headrow .headlistcard{flex:1 1 230px;min-width:210px}
+  .headref{width:100%;height:auto;display:block}
+  .reflbl{font:600 9.5px -apple-system,"PingFang TC",sans-serif;fill:var(--ink)}
+  .refline{stroke:var(--feat);stroke-width:.8}
+  .refdot{fill:var(--accent)}
+  .headlist{display:flex;flex-direction:column;gap:6px;padding:2px}
+  .hlrow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+  .hlname{color:var(--ink)}
+  .hlname small{color:var(--muted);font-size:11px;margin-left:3px}
+  .hlchips{display:flex;gap:5px;flex:0 0 auto}
+  .textreg{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:7px;
+           padding:3px 11px;font-size:12px;color:var(--ink);user-select:none;transition:.12s;white-space:nowrap}
+  .textreg:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .textreg.selected{background:var(--sel);border-color:var(--sel-stroke);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -100,7 +142,8 @@
   <p>點擊部位即標記病灶（傷口 / 皮膚感染 / 異位性皮膚炎），右側即時產生英文部位清單。再次點擊可取消。</p>
 </header>
 
-<div class="wrap">
+<div class="layout">
+  <div class="maincol">
   <div class="figs">
     <div class="figcard">
       <h2>Anterior view · 前面</h2>
@@ -114,10 +157,64 @@
     </div>
   </div>
 
-  <div class="panel">
-    <h2>Current region · 目前部位</h2>
-    <div class="readout" id="readout"><span class="empty">滑過或點擊人像…</span></div>
+<div class="detailsec">
+  <div class="detailhead">
+    <h2>Head · hand · foot detail · 頭手足細部（放大）</h2>
+  </div>
+  <p class="detailnote"><b>頭部</b>＝對照圖＋文字清單（點文字標記，含左右）；<b>手・足</b>＝左右各一張示意圖，點分區即標記。含指甲・甲周・指腹、遠/中/近節指骨、掌面 vs 背面。</p>
 
+  <details class="dgroup">
+    <summary>頭部 Head — 點右側文字標記（左圖僅供對照位置）</summary>
+    <div class="drow headrow">
+      <div class="dcard headrefcard">
+        <h3>對照圖 reference（lateral）</h3>
+        <svg class="headref" viewBox="-34 0 368 212" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="150" cy="96" rx="66" ry="74" fill="#f3ddc1" stroke="#c79f78" stroke-width="1.6"/>
+          <path d="M85,90 C77,97 77,104 87,108" fill="none" stroke="#c79f78" stroke-width="1.4"/>
+          <ellipse cx="160" cy="112" rx="9" ry="14" fill="none" stroke="#c79f78" stroke-width="1.4"/>
+          <path d="M157,107 q4,5 0,11" fill="none" stroke="#c79f78" stroke-width="1"/>
+          <g class="refmark">
+            <circle class="refdot" cx="150" cy="26" r="2.4"/><line class="refline" x1="150" y1="26" x2="150" y2="13"/><text class="reflbl" x="150" y="10" text-anchor="middle">Vertex 巔頂</text>
+            <circle class="refdot" cx="110" cy="60" r="2.4"/><line class="refline" x1="110" y1="60" x2="64" y2="50"/><text class="reflbl" x="60" y="50" text-anchor="end">Frontal 額</text>
+            <circle class="refdot" cx="96" cy="104" r="2.4"/><line class="refline" x1="96" y1="104" x2="64" y2="104"/><text class="reflbl" x="60" y="107" text-anchor="end">Periorbital 眼周</text>
+            <circle class="refdot" cx="134" cy="118" r="2.4"/><line class="refline" x1="134" y1="118" x2="64" y2="152"/><text class="reflbl" x="60" y="155" text-anchor="end">Temporal 顳</text>
+            <circle class="refdot" cx="178" cy="58" r="2.4"/><line class="refline" x1="178" y1="58" x2="240" y2="48"/><text class="reflbl" x="244" y="48" text-anchor="start">Parietal 頂</text>
+            <circle class="refdot" cx="208" cy="96" r="2.4"/><line class="refline" x1="208" y1="96" x2="240" y2="98"/><text class="reflbl" x="244" y="101" text-anchor="start">Occipital 枕</text>
+            <circle class="refdot" cx="194" cy="146" r="2.4"/><line class="refline" x1="194" y1="146" x2="240" y2="152"/><text class="reflbl" x="244" y="155" text-anchor="start">Suboccipital 枕下</text>
+            <circle class="refdot" cx="160" cy="124" r="2.4"/><line class="refline" x1="160" y1="124" x2="150" y2="190"/><text class="reflbl" x="150" y="200" text-anchor="middle">Ear / mastoid 耳周·乳突</text>
+          </g>
+        </svg>
+      </div>
+      <div class="dcard headlistcard">
+        <h3>點選部位（含左右）</h3>
+        <div class="headlist" id="headList"></div>
+      </div>
+    </div>
+  </details>
+
+  <details class="dgroup">
+    <summary>手 Hand</summary>
+    <div class="drow">
+      <div class="dcard"><h3>手背 <b>左 L</b></h3><svg class="body" id="dHandD_L" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>手背 <b>右 R</b></h3><svg class="body" id="dHandD_R" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>手掌 <b>左 L</b></h3><svg class="body" id="dHandP_L" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>手掌 <b>右 R</b></h3><svg class="body" id="dHandP_R" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </div>
+  </details>
+
+  <details class="dgroup">
+    <summary>足 Foot</summary>
+    <div class="drow">
+      <div class="dcard"><h3>足背 <b>左 L</b></h3><svg class="body" id="dFootD_L" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>足背 <b>右 R</b></h3><svg class="body" id="dFootD_R" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>足底 <b>左 L</b></h3><svg class="body" id="dFootP_L" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="dcard"><h3>足底 <b>右 R</b></h3><svg class="body" id="dFootP_R" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </div>
+  </details>
+</div>
+  </div><!-- /maincol -->
+
+  <div class="panel">
     <div class="listhead">
       <h2 style="margin:0;font-size:15px">Marked lesions · 已標記</h2>
       <span class="count" id="count">0</span>
@@ -125,37 +222,22 @@
     <ul class="sel" id="sel"></ul>
     <div class="empty-list" id="emptyList">尚未標記任何部位。</div>
 
+    <p class="note">
+      側別依解剖學標準（病人本人左右）。前視圖中病人右側顯示於畫面左側，後視圖左右與畫面一致。<br>
+      滑過部位即顯示名稱（跟隨游標）；點擊標記、再點取消。純前端、離線可用。
+    </p>
+
     <p class="gen">Generated description（可複製進病歷）：</p>
     <textarea id="out" readonly placeholder="Lesions noted at: …"></textarea>
     <div class="btns">
       <button class="act primary" id="copyBtn">複製文字</button>
       <button class="act" id="clearBtn">全部清除</button>
     </div>
-    <p class="note">
-      側別依解剖學標準（病人本人左右）。前視圖中病人右側顯示於畫面左側，後視圖則左右與畫面一致。<br>
-      純前端、離線可用；無外部資源。屈側皺褶（antecubital / popliteal fossa）已獨立切出，方便標記 AD 好發處。
-    </p>
   </div>
-</div>
+</div><!-- /layout -->
 
-<div class="detailsec">
-  <div class="detailhead">
-    <h2>Digit &amp; sole detail · 手足細部（放大）</h2>
-    <div class="sidetoggle">側別 Side：
-      <button data-dside="R" class="on">Right 右</button>
-      <button data-dside="L">Left 左</button>
-    </div>
-  </div>
-  <p class="detailnote">點擊分區即標記。<b>頭側・手・足</b>跟隨上方 R/L 切換；<b>頭頂俯視</b>左右並列、側別固定（方便頭痛兩側比對）。含頭部分區、指甲・甲周・指腹、遠/中/近節指骨、掌面 vs 背面。</p>
-  <div class="detail-wrap">
-    <div class="dcard"><h3>Head · lateral 頭側</h3><svg class="body" id="dHeadL" viewBox="0 0 190 200" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="dcard"><h3>Head · top 頭頂俯視</h3><svg class="body" id="dHeadS" viewBox="0 0 190 210" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="dcard"><h3>Hand · dorsal 手背</h3><svg class="body" id="dHandD" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="dcard"><h3>Hand · palmar 手掌</h3><svg class="body" id="dHandP" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="dcard"><h3>Foot · dorsal 足背</h3><svg class="body" id="dFootD" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="dcard"><h3>Foot · plantar 足底</h3><svg class="body" id="dFootP" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg"></svg></div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
+<div class="cursortip" id="cursorTip"></div>
 
 <script>
 // ---- shape helpers --------------------------------------------------------
@@ -315,11 +397,20 @@ const OUTLINE = bodyOutline();
 function defs(view){
   return `
 <defs>
-  <linearGradient id="skin_${view}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#f9e9d6"/><stop offset="1" stop-color="#eed6ba"/>
+  <linearGradient id="skin_${view}" x1="0.15" y1="0.05" x2="0.85" y2="1">
+    <stop offset="0" stop-color="#fcefde"/><stop offset="0.55" stop-color="#f3ddc1"/><stop offset="1" stop-color="#e7cba6"/>
   </linearGradient>
-  <filter id="soft_${view}" x="-20%" y="-10%" width="140%" height="120%">
-    <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#b98a55" flood-opacity="0.28"/>
+  <!-- pseudo-3D: blur body alpha as a height map, diffuse-light it from upper-left,
+       multiply over the skin → rounded volume; edges darken, limb centres lift -->
+  <filter id="vol_${view}" x="-25%" y="-12%" width="150%" height="128%">
+    <feDropShadow dx="0" dy="3" stdDeviation="4.5" flood-color="#b98a55" flood-opacity="0.30" result="ds"/>
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="hmap"/>
+    <feDiffuseLighting in="hmap" surfaceScale="3.4" diffuseConstant="1" lighting-color="#ffffff" result="diff">
+      <feDistantLight azimuth="232" elevation="60"/>
+    </feDiffuseLighting>
+    <feComposite in="diff" in2="SourceAlpha" operator="in" result="diffClip"/>
+    <feBlend in="SourceGraphic" in2="diffClip" mode="multiply" result="lit"/>
+    <feMerge><feMergeNode in="ds"/><feMergeNode in="lit"/></feMerge>
   </filter>
   <clipPath id="body_${view}"><path d="${OUTLINE}"/></clipPath>
 </defs>`;
@@ -332,14 +423,32 @@ const PLAIN = new Set(['periorbital','cheek','nose','perioral','chin']);  // str
 function faceFeatures(view){
   if(view!=='front') return '';
   return `<g>
-    <path class="feature" d="M99,60.5 Q105,58 111,60"/>
-    <path class="feature" d="M129,60 Q135,58 141,60.5"/>
-    <ellipse class="eyeball" cx="105" cy="67" rx="6" ry="3.3"/>
-    <ellipse class="eyeball" cx="135" cy="67" rx="6" ry="3.3"/>
-    <circle class="pupil" cx="105" cy="67" r="1.7"/>
-    <circle class="pupil" cx="135" cy="67" r="1.7"/>
-    <path class="feature" d="M120,65 L118.5,75 Q120,77 122,75.3"/>
-    <path class="feature" d="M111,84 Q120,87.2 129,84"/>
+    <!-- eyebrows -->
+    <path class="brow" d="M98,60 Q105,56.8 112,59.6"/>
+    <path class="brow" d="M128,59.6 Q135,56.8 142,60"/>
+    <!-- eyes: white + iris + pupil + highlight, with lid crease -->
+    <ellipse class="eyeball" cx="105" cy="67" rx="6" ry="3.5"/>
+    <ellipse class="eyeball" cx="135" cy="67" rx="6" ry="3.5"/>
+    <circle class="iris" cx="105" cy="67.2" r="2.6"/>
+    <circle class="iris" cx="135" cy="67.2" r="2.6"/>
+    <circle class="pupil" cx="105" cy="67.2" r="1.1"/>
+    <circle class="pupil" cx="135" cy="67.2" r="1.1"/>
+    <circle class="eyehl" cx="103.8" cy="65.9" r="0.8"/>
+    <circle class="eyehl" cx="133.8" cy="65.9" r="0.8"/>
+    <path class="feature thin" d="M99.2,66 Q105,63.2 110.8,66"/>
+    <path class="feature thin" d="M129.2,66 Q135,63.2 140.8,66"/>
+    <!-- nose: bridge curving to the tip, then alae + nostrils -->
+    <path class="feature" d="M120,62 C119.2,67 118.6,72 119,75 C119.2,77.2 121.1,77.6 122.6,76.6"/>
+    <path class="feature" d="M116.4,76 Q120,79.2 123.6,76.6"/>
+    <path class="feature thin" d="M117.3,76.4 Q118.4,77.6 119.6,76.8"/>
+    <path class="feature thin" d="M122.7,76.8 Q121.6,77.6 120.6,76.9"/>
+    <!-- mouth: upper lip (cupid's bow) + parting + lower lip -->
+    <path class="feature" d="M115,82.9 Q117.8,81.6 120,82.7 Q122.2,81.6 125,82.9"/>
+    <path class="feature" d="M112,84.3 Q120,85.9 128,84.3"/>
+    <path class="feature thin" d="M113.5,84.9 Q120,88.4 126.5,84.9"/>
+    <!-- ear inner helix (over the ear regions) -->
+    <path class="feature thin" d="M90.4,59.5 Q94,63.5 90.8,67.8"/>
+    <path class="feature thin" d="M149.6,59.5 Q146,63.5 149.2,67.8"/>
   </g>`;
 }
 
@@ -360,7 +469,7 @@ function renderFigure(svgId, view){
     if(r.id==='ear') ears+=el; else bands+=el;
   });
   svg.innerHTML = defs(view)
-    + `<path class="silhouette" d="${OUTLINE}" fill="url(#skin_${view})" filter="url(#soft_${view})"/>`
+    + `<path class="silhouette" d="${OUTLINE}" fill="url(#skin_${view})" filter="url(#vol_${view})"/>`
     + `<g clip-path="url(#body_${view})">${bands}</g>`
     + `<path class="outline" d="${OUTLINE}"/>`
     + ears                                                   // ears sit on top of outline
@@ -453,18 +562,30 @@ const HEAD_SUP = [
   {...rZone('s-vtx','Vertex','巔頂',79,88,32,34), side:'C'},
 ];
 
+function mirrorAcross(s,W){           // reflect a detail shape across viewBox centre
+  if(s.t==='rect')    return {...s, x:W - s.x - s.w};
+  if(s.t==='ellipse') return {...s, cx:W - s.cx};
+  if(s.t==='poly')    return {...s, pts:s.pts.split(' ').map(p=>{const[x,y]=p.split(',').map(Number);return (W-x)+','+y;}).join(' ')};
+  return s;
+}
+// Each detail diagram carries a FIXED side (no toggle). opts.side overrides every
+// region's side; opts.mirror flips geometry for the left/right twin. Regions are
+// ordinary .region elements (data-side baked in) so the normal handler manages them.
 function renderDetail(svgId, regions, opts){
   opts=opts||{};
   const svg=document.getElementById(svgId);
   const clipped=!!opts.sil;
+  const W=opts.W||200;
   let body='';
-  regions.forEach(r=>{
-    const fixed = r.side ? ` data-fixedside="${r.side}"` : '';
-    const cls='region'+(clipped?'':' solid')+(r.nail?' nail':'');
-    const title=`${r.en}（${r.zh}）`;
-    body+=shapeSVG(r.shape).replace('/>',
-      ` class="${cls}" data-detail="1" data-key="${svgId}|${r.id}" data-en="${r.en}" data-zh="${r.zh}"${fixed}><title>${title}</title></`
-      + closeTag(r.shape.t));
+  regions.forEach(r0=>{
+    const shape = opts.mirror ? mirrorAcross(r0.shape, W) : r0.shape;
+    const side = (opts.side!=null) ? opts.side : (r0.side||'');
+    const sideTxt = side==='R'?'Right ':side==='L'?'Left ':'';
+    const cls='region'+(clipped?'':' solid')+(r0.nail?' nail':'');
+    const title=`${sideTxt}${r0.en}（${r0.zh}）`;
+    body+=shapeSVG(shape).replace('/>',
+      ` class="${cls}" data-key="${svgId}|${r0.id}" data-en="${r0.en}" data-zh="${r0.zh}" data-side="${side}"><title>${title}</title></`
+      + closeTag(shape.t));
   });
   if(clipped){
     svg.innerHTML = `<defs><clipPath id="dc_${svgId}">${opts.sil}</clipPath></defs>`
@@ -476,23 +597,46 @@ function renderDetail(svgId, regions, opts){
     svg.innerHTML = body;
   }
 }
-renderDetail('dHeadL',HEAD_LAT,{ sil:'<ellipse cx="95" cy="94" rx="68" ry="74"/>',
-  extra:'<path d="M27,108 l-9,6 l9,6" fill="none" stroke="var(--feat)" stroke-width="1.4"/>'
-       +'<ellipse cx="99" cy="120" rx="9" ry="13" fill="none" stroke="var(--feat)" stroke-width="1.2"/>'
-       +'<text x="9" y="98" font-size="9" fill="#8a7d6d">前</text>' });
-renderDetail('dHeadS',HEAD_SUP,{ sil:'<ellipse cx="95" cy="105" rx="58" ry="82"/>',
-  extra:'<path d="M95,15 l-7,10 l14,0 z" fill="var(--feat)"/>'
-       +'<text x="46" y="16" font-size="10" font-weight="600" fill="#8a7d6d">L</text>'
-       +'<text x="138" y="16" font-size="10" font-weight="600" fill="#8a7d6d">R</text>' });
-renderDetail('dHandD',HAND_D);
-renderDetail('dHandP',HAND_P);
-renderDetail('dFootD',FOOT_D);
-renderDetail('dFootP',FOOT_P);
+
+// head: reference diagram is static in the HTML; selection is via a clickable
+// text list (each chip is a normal .region so clear/remove handlers cover it).
+const HEAD_TEXT = [
+  {id:'frontal',     en:'Frontal',               zh:'額',        sides:['C']},
+  {id:'temporal',    en:'Temporal',              zh:'顳',        sides:['L','R']},
+  {id:'parietal',    en:'Parietal',              zh:'頂',        sides:['L','R']},
+  {id:'vertex',      en:'Vertex',                zh:'巔頂',      sides:['C']},
+  {id:'occipital',   en:'Occipital',             zh:'枕',        sides:['L','R']},
+  {id:'h-periorbital',en:'Periorbital',          zh:'眼周',      sides:['L','R']},
+  {id:'periauric',   en:'Ear / peri-auricular',  zh:'耳周',      sides:['L','R']},
+  {id:'mastoid',     en:'Mastoid',               zh:'乳突',      sides:['L','R']},
+  {id:'suboccip',    en:'Suboccipital / nuchal', zh:'枕下/項',   sides:['C']},
+];
+(function renderHeadList(){
+  let h='';
+  HEAD_TEXT.forEach(r=>{
+    let chips='';
+    r.sides.forEach(s=>{
+      const label = s==='C' ? '標記' : (s==='L'?'左 L':'右 R');
+      const sideAttr = s==='C' ? '' : s;
+      chips += `<b class="region textreg" data-key="head|${r.id}|${s}" data-en="${r.en}" data-zh="${r.zh}" data-side="${sideAttr}">${label}</b>`;
+    });
+    h += `<div class="hlrow"><span class="hlname">${r.en} <small>${r.zh}</small></span><span class="hlchips">${chips}</span></div>`;
+  });
+  document.getElementById('headList').innerHTML = h;
+})();
+// hand: dorsal base = right (thumb on left); palmar base = left
+renderDetail('dHandD_L',HAND_D,{W:200,side:'L',mirror:true });
+renderDetail('dHandD_R',HAND_D,{W:200,side:'R',mirror:false});
+renderDetail('dHandP_L',HAND_P,{W:200,side:'L',mirror:false});
+renderDetail('dHandP_R',HAND_P,{W:200,side:'R',mirror:true });
+// foot: dorsal base = right (great toe on left); plantar base = left
+renderDetail('dFootD_L',FOOT_D,{W:200,side:'L',mirror:true });
+renderDetail('dFootD_R',FOOT_D,{W:200,side:'R',mirror:false});
+renderDetail('dFootP_L',FOOT_P,{W:200,side:'L',mirror:false});
+renderDetail('dFootP_R',FOOT_P,{W:200,side:'R',mirror:true });
 
 // ---- interaction ----------------------------------------------------------
-let detailSide='R';   // side applied to detail-diagram clicks
 const selected = new Map(); // key -> {en,zh,side}
-const readout = document.getElementById('readout');
 const selUl = document.getElementById('sel');
 const emptyList = document.getElementById('emptyList');
 const out = document.getElementById('out');
@@ -504,12 +648,20 @@ function phrase(r){       // for generated description
   return sw ? sw+' '+r.en.charAt(0).toLowerCase()+r.en.slice(1) : r.en;
 }
 
-function showReadout(r){
-  const sw = sideWord(r.side);
-  readout.innerHTML = `<span class="en">${sw?sw+' ':''}${r.en}</span> `
-    + `<span class="zh">${sw?'('+(r.side==='R'?'右':'左')+') ':''}${r.zh}</span>`;
+// "Current region" follows the cursor as a floating label
+const cursorTip = document.getElementById('cursorTip');
+function showTip(e,t){
+  const s=t.dataset.side, sw=sideWord(s);
+  cursorTip.innerHTML = '<b>'+(sw?sw+' ':'')+t.dataset.en+'</b>'
+    + '<small>'+(sw?'('+(s==='R'?'右':'左')+') ':'')+t.dataset.zh+'</small>';
+  let x=e.clientX+14, y=e.clientY+18;
+  const w=cursorTip.offsetWidth||150, h=cursorTip.offsetHeight||30;
+  if(x+w>window.innerWidth-8) x=e.clientX-w-14;
+  if(y+h>window.innerHeight-8) y=e.clientY-h-14;
+  cursorTip.style.left=x+'px'; cursorTip.style.top=y+'px';
+  cursorTip.classList.add('show');
 }
-function clearReadout(){ readout.innerHTML = '<span class="empty">滑過或點擊人像…</span>'; }
+function hideTip(){ cursorTip.classList.remove('show'); }
 
 function refresh(){
   countEl.textContent = selected.size;
@@ -526,53 +678,52 @@ function refresh(){
     lines.push(phrase(r));
   });
   out.value = lines.length ? 'Lesions noted at: '+lines.join(', ')+'.' : '';
-  updateDetailHighlights();
 }
 
-// detail side: fixedside 'L'/'R' = locked; 'C' = central/no-side; else follow toggle
-function detSide(t){
-  const f=t.dataset.fixedside;
-  if(f==='C') return '';
-  if(f) return f;
-  return detailSide;
+// floating confirmation — visible at any scroll position / screen width
+let _toastTimer;
+function showToast(msg){
+  const el=document.getElementById('toast'); if(!el) return;
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_toastTimer); _toastTimer=setTimeout(()=>el.classList.remove('show'),1600);
 }
-function regSide(t){ return t.dataset.detail==='1' ? detSide(t) : t.dataset.side; }
-function regKey(t){
-  if(t.dataset.detail!=='1') return t.dataset.key;
-  const s=detSide(t); return s ? t.dataset.key+'|'+s : t.dataset.key;
-}
-// detail shapes drawn once but selectable per side → reflect current state
-function updateDetailHighlights(){
-  document.querySelectorAll('.region[data-detail="1"]').forEach(el=>{
-    const s=detSide(el);
-    const key=s ? el.dataset.key+'|'+s : el.dataset.key;
-    el.classList.toggle('selected', selected.has(key));
-  });
+// shared toggle for both the body SVGs and the head text chips
+function toggleRegion(t){
+  const key=t.dataset.key;
+  const label=(sideWord(t.dataset.side)?sideWord(t.dataset.side)+' ':'')+t.dataset.en;
+  if(selected.has(key)){
+    selected.delete(key); t.classList.remove('selected'); refresh();
+    showToast('✕ 移除 '+label+'　共 '+selected.size+' 處');
+  } else {
+    selected.set(key,{en:t.dataset.en,zh:t.dataset.zh,side:t.dataset.side});
+    t.classList.add('selected'); refresh();
+    showToast('✓ 已標記 '+label+'　共 '+selected.size+' 處');
+  }
 }
 
 document.querySelectorAll('svg.body').forEach(svg=>{
   svg.addEventListener('mousemove',e=>{
-    const t=e.target.closest('.region'); if(!t) return;
-    showReadout({en:t.dataset.en,zh:t.dataset.zh,side:regSide(t)});
+    const t=e.target.closest('.region'); if(!t){ hideTip(); return; }
+    showTip(e,t);
   });
-  svg.addEventListener('mouseleave',clearReadout);
+  svg.addEventListener('mouseleave',hideTip);
   svg.addEventListener('click',e=>{
     const t=e.target.closest('.region'); if(!t) return;
-    const key=regKey(t);
-    if(selected.has(key)){ selected.delete(key); if(t.dataset.detail!=='1') t.classList.remove('selected'); }
-    else{
-      selected.set(key,{en:t.dataset.en,zh:t.dataset.zh,side:regSide(t)});
-      if(t.dataset.detail!=='1') t.classList.add('selected');
-    }
-    refresh();
+    toggleRegion(t);
   });
 });
 
-document.querySelectorAll('.sidetoggle button').forEach(b=>b.addEventListener('click',()=>{
-  detailSide=b.dataset.dside;
-  document.querySelectorAll('.sidetoggle button').forEach(x=>x.classList.toggle('on', x===b));
-  updateDetailHighlights();
-}));
+// head text-list chips (HTML, not in an svg) — same toggle logic
+const headListEl = document.getElementById('headList');
+headListEl.addEventListener('mousemove',e=>{
+  const t=e.target.closest('.textreg'); if(!t){ hideTip(); return; }
+  showTip(e,t);
+});
+headListEl.addEventListener('mouseleave',hideTip);
+headListEl.addEventListener('click',e=>{
+  const t=e.target.closest('.textreg'); if(!t) return;
+  toggleRegion(t);
+});
 
 selUl.addEventListener('click',e=>{
   const b=e.target.closest('button[data-rm]'); if(!b) return;
