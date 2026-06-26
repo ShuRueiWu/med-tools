@@ -458,13 +458,11 @@ function renderFigure(svgId, view){
   const lMark = view==='front'?'R':'L', rMark = view==='front'?'L':'R';
   let bands='', ears='';
   regs.forEach(r=>{
-    const sideTxt = r.side==='C'?'':(r.side==='R'?'Right ':'Left ');
-    const title = `${sideTxt}${r.en}（${r.zh}）`;
     let cls='region';
     if(r.id==='ear') cls+=' ear';
     if(PLAIN.has(r.id)) cls+=' plain';   // facial-feature zones: no divider box, drawn art instead
     const el = shapeSVG(r.shape).replace('/>',
-      ` class="${cls}" data-key="${r.key}" data-en="${r.en}" data-zh="${r.zh}" data-side="${r.side}"><title>${title}</title></`
+      ` class="${cls}" data-key="${r.key}" data-en="${r.en}" data-zh="${r.zh}" data-side="${r.side}"></`
       + closeTag(r.shape.t));
     if(r.id==='ear') ears+=el; else bands+=el;
   });
@@ -580,11 +578,9 @@ function renderDetail(svgId, regions, opts){
   regions.forEach(r0=>{
     const shape = opts.mirror ? mirrorAcross(r0.shape, W) : r0.shape;
     const side = (opts.side!=null) ? opts.side : (r0.side||'');
-    const sideTxt = side==='R'?'Right ':side==='L'?'Left ':'';
     const cls='region'+(clipped?'':' solid')+(r0.nail?' nail':'');
-    const title=`${sideTxt}${r0.en}（${r0.zh}）`;
     body+=shapeSVG(shape).replace('/>',
-      ` class="${cls}" data-key="${svgId}|${r0.id}" data-en="${r0.en}" data-zh="${r0.zh}" data-side="${side}"><title>${title}</title></`
+      ` class="${cls}" data-key="${svgId}|${r0.id}" data-en="${r0.en}" data-zh="${r0.zh}" data-side="${side}"></`
       + closeTag(shape.t));
   });
   if(clipped){
