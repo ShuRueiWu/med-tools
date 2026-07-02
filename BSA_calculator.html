@@ -57,6 +57,8 @@
     cursor:crosshair;display:block;margin:0 auto;}
 
   /* 結果 */
+  .rhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .rhead h2{margin:0;}
   .result{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;}
   .bignum{flex:1 1 200px;background:var(--accent-soft);border-radius:12px;
     padding:18px;text-align:center;}
@@ -64,6 +66,8 @@
   .bignum .u{font-size:15px;color:var(--accent);opacity:.8;}
   .bignum .cap{font-size:12px;color:var(--muted);margin-top:6px;}
   .breakdown{flex:2 1 320px;}
+  .subtot{font-size:12.5px;color:var(--muted);margin-bottom:8px;}
+  .subtot b{color:var(--accent);font-variant-numeric:tabular-nums;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
   th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);}
   th{color:var(--muted);font-weight:600;font-size:12px;}
@@ -101,11 +105,12 @@
         <span id="brushv">8</span>
       </div>
       <div class="spacer"></div>
+      <button class="btn" id="undo">↩ 復原</button>
       <button class="btn" id="clearFront">清前面</button>
       <button class="btn" id="clearBack">清背面</button>
       <button class="btn" id="clearAll">全部清除</button>
     </div>
-    <p class="note" style="margin-top:10px;">🪣 <b>填區</b>：點一下填滿整個部位；再點<b>已填滿</b>的部位＝清除。🖌 塗／🩹 擦 為筆刷微調（快捷鍵 B／E／F）。</p>
+    <p class="note" style="margin-top:10px;">🪣 <b>填區</b>：點一下填滿整個部位；再點<b>已填滿</b>的部位＝清除。🖌 塗／🩹 擦 為筆刷微調。快捷鍵 B／E／F，⌘/Ctrl+Z 復原。</p>
   </div>
 
   <div class="card">
@@ -122,15 +127,19 @@
   </div>
 
   <div class="card">
-    <h2>結果</h2>
+    <div class="rhead">
+      <h2>結果</h2>
+      <button class="btn" id="copyBtn">📋 複製摘要</button>
+    </div>
     <div class="result">
       <div class="bignum">
         <div><span class="n" id="totalNum">0.0</span><span class="u"> %</span></div>
         <div class="cap">估計受影響體表面積<br>(%TBSA)</div>
       </div>
       <div class="breakdown">
+        <div class="subtot" id="subtot"></div>
         <table>
-          <thead><tr><th>部位</th><th></th><th style="text-align:right">占全身 %</th></tr></thead>
+          <thead><tr><th>部位（占該區）</th><th></th><th style="text-align:right">占全身 %</th></tr></thead>
           <tbody id="bdBody"></tbody>
         </table>
         <div class="empty" id="bdEmpty">尚未塗色。</div>
@@ -170,8 +179,10 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
   };
 }
 
-// ---- 尺寸 ----
-const VW=200, VH=440;
+// ---- 尺寸：邏輯格(統計/塗色) vs 顯示格(高解析 retina) ----
+const VW=200, VH=440;        // 邏輯座標（統計精度基準，不動）
+const SS=3;                  // 超取樣倍率（僅影響底圖顯示清晰度）
+const W=VW*SS, H=VH*SS;      // 顯示 buffer 尺寸
 const SKIN='#ecd9c0', OUTLINE='#c7b393';
 
 // ---- Lund-Browder 年齡資料（A=½頭, B=½單側大腿, C=½單側小腿）----
@@ -224,20 +235,24 @@ const G={
 const P=v=>()=>v;
 const PA=k=>a=>a[k];
 
-// 部位群組（前後/左右合併顯示用）
-function groupOf(key){
-  if(key.startsWith('head'))return '頭';
-  if(key.startsWith('neck'))return '頸';
-  if(key.startsWith('trunk'))return '軀幹';
-  if(key==='genit')return '生殖器';
-  if(key.startsWith('butt'))return '臀';
-  if(key.startsWith('ua'))return '上臂';
-  if(key.startsWith('fa'))return '前臂';
-  if(key.startsWith('hand'))return '手';
-  if(key.startsWith('thigh'))return '大腿';
-  if(key.startsWith('leg'))return '小腿';
-  if(key.startsWith('foot'))return '足';
-  return key;
+// 部位中文標籤（含左右・前後，供明細與複製摘要）
+function labelOf(key){
+  if(key==='trunk_ant') return '前軀幹';
+  if(key==='trunk_post') return '後軀幹';
+  if(key==='genit') return '生殖器';
+  const side = key.includes('R') ? '右' : key.includes('L') ? '左' : '';
+  const asp  = key.endsWith('_f') ? '(前)' : key.endsWith('_b') ? '(後)' : '';
+  let b='';
+  if(key.startsWith('head')) b='頭';
+  else if(key.startsWith('neck')) b='頸';
+  else if(key.startsWith('ua'))   b='上臂';
+  else if(key.startsWith('fa'))   b='前臂';
+  else if(key.startsWith('hand')) b='手';
+  else if(key.startsWith('thigh'))b='大腿';
+  else if(key.startsWith('leg'))  b='小腿';
+  else if(key.startsWith('foot')) b='足';
+  else if(key.startsWith('butt')) b='臀';
+  return side+b+asp;
 }
 
 function buildRegionList(){
@@ -272,75 +287,71 @@ const REGIONS=buildRegionList();
 // ---- 建立每個 view 的狀態 ----
 function buildView(view){
   const regions=REGIONS.filter(r=>r.view===view).map(r=>({...r,totalCount:0}));
-  const N=VW*VH;
-  const regionId=new Int16Array(N).fill(-1);
+  const Nl=VW*VH;
+  const regionId=new Int16Array(Nl).fill(-1);
 
+  // regionId 建在邏輯解析度（不縮放）
   const tmp=document.createElement('canvas');tmp.width=VW;tmp.height=VH;
   const t=tmp.getContext('2d',{willReadFrequently:true});
-  // 逐區寫入 id（後者覆蓋前者重疊像素）
   regions.forEach((r,id)=>{
     t.clearRect(0,0,VW,VH);
     t.beginPath(); r.shape(t); t.fillStyle='#fff'; t.fill();
     const d=t.getImageData(0,0,VW,VH).data;
-    for(let p=0;p<N;p++){ if(d[p*4+3]>128) regionId[p]=id; }
+    for(let p=0;p<Nl;p++){ if(d[p*4+3]>128) regionId[p]=id; }
   });
-  // 由最終 regionId 重算各區像素總數（含覆蓋後的真正歸屬）
   const totals=new Array(regions.length).fill(0);
-  for(let p=0;p<N;p++){const id=regionId[p]; if(id>=0)totals[id]++;}
+  for(let p=0;p<Nl;p++){const id=regionId[p]; if(id>=0)totals[id]++;}
   regions.forEach((r,id)=>r.totalCount=totals[id]);
 
-  // 底圖（剪影外觀）
-  const bc=document.createElement('canvas');bc.width=VW;bc.height=VH;
-  const b=bc.getContext('2d',{willReadFrequently:true});
+  // 高解析底圖（人形剪影，crisp）— 一次繪製
+  const baseHi=document.createElement('canvas');baseHi.width=W;baseHi.height=H;
+  const b=baseHi.getContext('2d'); b.scale(SS,SS);
   regions.forEach(r=>{ b.beginPath(); r.shape(b); b.fillStyle=SKIN; b.fill(); });
   b.lineWidth=1; b.strokeStyle=OUTLINE;
   regions.forEach(r=>{ b.beginPath(); r.shape(b); b.stroke(); });
-  const baseData=b.getImageData(0,0,VW,VH);
+
+  // 邏輯解析度 paint overlay（每幀重建、放大顯示）
+  const paintCanvas=document.createElement('canvas');paintCanvas.width=VW;paintCanvas.height=VH;
+  const paintCtx=paintCanvas.getContext('2d');
+  const paintFrame=paintCtx.createImageData(VW,VH);
 
   const canvas=document.getElementById('cv_'+view);
-  canvas.width=VW; canvas.height=VH;
-  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
 
-  return {view,canvas,ctx,regionId,baseData,regions,
-          painted:new Uint8Array(N),cursor:null,down:false,last:null,hoverId:-1};
+  return {view,canvas,ctx,regionId,baseHi,paintCanvas,paintCtx,paintFrame,regions,
+          painted:new Uint8Array(Nl),cursor:null,down:false,last:null,hoverId:-1};
 }
 
 let VIEWS=[];
 let brushSize=8, tool='paint', dirty=true;
+let lastStats={total:0,frontSub:0,backSub:0,involved:[],age:currentAge};
 
-// ---- 繪製 ----
+// ---- 繪製（雙解析度合成）----
 function renderView(v){
-  const out=v.ctx.createImageData(VW,VH);
-  out.data.set(v.baseData.data);
-  const od=out.data, pa=v.painted, N=VW*VH;
-  for(let p=0;p<N;p++){
-    if(pa[p]){
-      const i=p*4;
-      od[i]  =(od[i]*0.25+220*0.75)|0;
-      od[i+1]=(od[i+1]*0.25+50*0.75)|0;
-      od[i+2]=(od[i+2]*0.25+50*0.75)|0;
-      od[i+3]=255;
-    }
+  const pd=v.paintFrame.data, pa=v.painted, rid=v.regionId, Nl=VW*VH;
+  const showHover=(tool==='fill' && v.hoverId>=0);
+  for(let p=0;p<Nl;p++){
+    const i=p*4;
+    if(pa[p]){ pd[i]=220; pd[i+1]=50; pd[i+2]=50; pd[i+3]=205; }
+    else if(showHover && rid[p]===v.hoverId){ pd[i]=194; pd[i+1]=112; pd[i+2]=61; pd[i+3]=120; }
+    else { pd[i+3]=0; }
   }
-  // 填區模式：highlight 游標所在部位（預示將被填滿/清除的範圍）
-  if(tool==='fill' && v.hoverId>=0){
-    const rid=v.regionId;
-    for(let p=0;p<N;p++){ if(rid[p]===v.hoverId){ const i=p*4;
-      od[i]  =(od[i]*0.55+194*0.45)|0;
-      od[i+1]=(od[i+1]*0.55+112*0.45)|0;
-      od[i+2]=(od[i+2]*0.55+61*0.45)|0;
-    }}
-  }
-  v.ctx.putImageData(out,0,0);
+  v.paintCtx.putImageData(v.paintFrame,0,0);
+  const ctx=v.ctx;
+  ctx.clearRect(0,0,W,H);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(v.baseHi,0,0);
+  ctx.drawImage(v.paintCanvas,0,0,VW,VH,0,0,W,H);
   if(v.cursor && tool!=='fill'){
-    v.ctx.beginPath();
-    v.ctx.arc(v.cursor.x,v.cursor.y,brushSize,0,Math.PI*2);
-    v.ctx.strokeStyle=(tool==='erase')?'rgba(70,70,70,.9)':'rgba(180,30,30,.9)';
-    v.ctx.lineWidth=1.5; v.ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(v.cursor.x*SS,v.cursor.y*SS,brushSize*SS,0,Math.PI*2);
+    ctx.strokeStyle=(tool==='erase')?'rgba(70,70,70,.9)':'rgba(180,30,30,.9)';
+    ctx.lineWidth=1.5*SS; ctx.stroke();
   }
 }
 
-// ---- 塗色 ----
+// ---- 塗色（邏輯解析度）----
 function stamp(v,x,y){
   const r=brushSize, r2=r*r, val=(tool==='erase')?0:1;
   const x0=Math.max(0,(x-r)|0), x1=Math.min(VW-1,Math.ceil(x+r));
@@ -366,47 +377,101 @@ function regionAt(v,x,y){
 }
 function fillRegion(v,x,y){
   const id=regionAt(v,x,y); if(id<0) return;
-  const rid=v.regionId, pa=v.painted, N=VW*VH;
+  const rid=v.regionId, pa=v.painted, Nl=VW*VH;
   let painted=0,total=0;
-  for(let p=0;p<N;p++) if(rid[p]===id){ total++; if(pa[p])painted++; }
+  for(let p=0;p<Nl;p++) if(rid[p]===id){ total++; if(pa[p])painted++; }
   const val=(total>0 && painted/total>=0.999)?0:1; // 已填滿→清除，否則→填滿
-  for(let p=0;p<N;p++) if(rid[p]===id) pa[p]=val;
+  for(let p=0;p<Nl;p++) if(rid[p]===id) pa[p]=val;
 }
 
-// ---- 統計 ----
+// ---- Undo（快照邏輯 painted，尺寸小）----
+const undoStack=[]; const UNDO_MAX=30;
+function pushUndo(){
+  undoStack.push(VIEWS.map(v=>v.painted.slice()));
+  if(undoStack.length>UNDO_MAX) undoStack.shift();
+}
+function undo(){
+  if(!undoStack.length) return;
+  const snap=undoStack.pop();
+  VIEWS.forEach((v,i)=>v.painted.set(snap[i]));
+  schedule();
+}
+
+// ---- 統計（產生結構化 lastStats）----
 function computeStats(){
   const age=ageData[currentAge];
-  let total=0; const groups={};
+  let total=0, frontSub=0, backSub=0;
+  const involved=[];
   VIEWS.forEach(v=>{
     const cnt=new Array(v.regions.length).fill(0);
-    const pa=v.painted,rid=v.regionId,N=VW*VH;
-    for(let p=0;p<N;p++){ if(pa[p]){const id=rid[p]; if(id>=0)cnt[id]++;} }
+    const pa=v.painted,rid=v.regionId,Nl=VW*VH;
+    for(let p=0;p<Nl;p++){ if(pa[p]){const id=rid[p]; if(id>=0)cnt[id]++;} }
     v.regions.forEach((r,id)=>{
       if(r.totalCount>0 && cnt[id]>0){
-        const contrib=(cnt[id]/r.totalCount)*r.pct(age);
+        const frac=cnt[id]/r.totalCount;
+        const contrib=frac*r.pct(age);
         total+=contrib;
-        const g=groupOf(r.key);
-        groups[g]=(groups[g]||0)+contrib;
+        if(v.view==='front') frontSub+=contrib; else backSub+=contrib;
+        involved.push({key:r.key,label:labelOf(r.key),view:v.view,frac,contrib});
       }
     });
   });
-  document.getElementById('totalNum').textContent=total.toFixed(1);
-
-  const rows=Object.entries(groups).filter(([,v])=>v>0.04).sort((a,b)=>b[1]-a[1]);
+  involved.sort((a,b)=>b.contrib-a.contrib);
+  lastStats={total,frontSub,backSub,involved,age:currentAge};
+  renderStats();
+}
+function renderStats(){
+  const s=lastStats;
+  document.getElementById('totalNum').textContent=s.total.toFixed(1);
+  const rows=s.involved.filter(it=>it.contrib>0.04);
+  document.getElementById('subtot').innerHTML =
+    rows.length ? `前面 <b>${s.frontSub.toFixed(1)}%</b> ・ 背面 <b>${s.backSub.toFixed(1)}%</b>` : '';
   const tb=document.getElementById('bdBody'),emp=document.getElementById('bdEmpty');
   tb.innerHTML='';
-  if(!rows.length){emp.style.display='';}
+  if(!rows.length){ emp.style.display=''; }
   else{
     emp.style.display='none';
-    const max=rows[0][1];
-    rows.forEach(([g,val])=>{
+    const max=rows[0].contrib;
+    rows.forEach(it=>{
+      const fp=Math.round(it.frac*100);
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${g}</td>`+
-        `<td style="width:45%"><div class="bar" style="width:${Math.max(4,val/max*100)}%"></div></td>`+
-        `<td class="val">${val.toFixed(1)}</td>`;
+      tr.innerHTML=`<td>${it.label} <span style="color:var(--muted);font-size:11.5px">${fp}%</span></td>`+
+        `<td style="width:42%"><div class="bar" style="width:${Math.max(4,it.contrib/max*100)}%"></div></td>`+
+        `<td class="val">${it.contrib.toFixed(1)}</td>`;
       tb.appendChild(tr);
     });
   }
+}
+
+// ---- 複製病歷摘要 ----
+function summaryText(){
+  const s=lastStats;
+  const rows=s.involved.filter(it=>it.contrib>0.04);
+  if(!rows.length) return '';
+  const a=ageList.find(x=>x.k===s.age);
+  const L=[];
+  L.push(`BSA 估算（Lund-Browder・${a.t} ${a.s}）`);
+  L.push(`估計 TBSA：${s.total.toFixed(1)}%`);
+  L.push(`前面 ${s.frontSub.toFixed(1)}% ／ 背面 ${s.backSub.toFixed(1)}%`);
+  L.push('受累部位：');
+  rows.forEach(it=>{ L.push(`・${it.label} ${Math.round(it.frac*100)}% → ${it.contrib.toFixed(1)}%`); });
+  return L.join('\n');
+}
+function fbCopy(text,done){
+  const ta=document.createElement('textarea'); ta.value=text;
+  ta.style.position='fixed'; ta.style.top='-1000px'; document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta); if(done)done();
+}
+function copySummary(){
+  const btn=document.getElementById('copyBtn');
+  const text=summaryText();
+  if(!text){ btn.textContent='尚未塗色'; setTimeout(()=>btn.textContent='📋 複製摘要',1200); return; }
+  const done=()=>{ btn.textContent='✓ 已複製'; setTimeout(()=>btn.textContent='📋 複製摘要',1500); };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done,()=>fbCopy(text,done));
+  } else fbCopy(text,done);
 }
 
 // ---- rAF 排程 ----
@@ -416,7 +481,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// ---- 座標轉換 ----
+// ---- 座標轉換（→ 邏輯座標）----
 function xy(v,e){
   const rect=v.canvas.getBoundingClientRect();
   return {x:(e.clientX-rect.left)*(VW/rect.width),
@@ -426,7 +491,8 @@ function bindCanvas(v){
   const cv=v.canvas;
   cv.addEventListener('pointerdown',e=>{
     const p=xy(v,e); v.cursor=p;
-    if(tool==='fill'){ fillRegion(v,p.x,p.y); schedule(); return; }
+    if(tool==='fill'){ pushUndo(); fillRegion(v,p.x,p.y); schedule(); return; }
+    pushUndo();
     cv.setPointerCapture(e.pointerId);
     v.down=true; v.last=p;
     stamp(v,p.x,p.y); schedule();
@@ -480,12 +546,16 @@ document.getElementById('toolseg').addEventListener('click',e=>{
 });
 const brush=document.getElementById('brush'),brushv=document.getElementById('brushv');
 brush.addEventListener('input',()=>{brushSize=+brush.value;brushv.textContent=brush.value;schedule();});
-document.getElementById('clearFront').onclick=()=>{VIEWS[0].painted.fill(0);schedule();};
-document.getElementById('clearBack').onclick =()=>{VIEWS[1].painted.fill(0);schedule();};
-document.getElementById('clearAll').onclick  =()=>{VIEWS.forEach(v=>v.painted.fill(0));schedule();};
+document.getElementById('undo').onclick=undo;
+document.getElementById('clearFront').onclick=()=>{pushUndo();VIEWS[0].painted.fill(0);schedule();};
+document.getElementById('clearBack').onclick =()=>{pushUndo();VIEWS[1].painted.fill(0);schedule();};
+document.getElementById('clearAll').onclick  =()=>{pushUndo();VIEWS.forEach(v=>v.painted.fill(0));schedule();};
+document.getElementById('copyBtn').onclick=copySummary;
 
-// 鍵盤快捷：E 切換橡皮擦、[ ] 調筆刷
+// 鍵盤快捷：⌘/Ctrl+Z 復原、B/E/F 切工具、[ ] 調筆刷
 window.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undo(); return; }
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
   if(e.key==='b'||e.key==='B'){ tool='paint'; syncToolButtons(); schedule(); }
   else if(e.key==='e'||e.key==='E'){ tool=(tool==='erase')?'paint':'erase'; syncToolButtons(); schedule(); }
   else if(e.key==='f'||e.key==='F'){ tool='fill'; syncToolButtons(); schedule(); }
