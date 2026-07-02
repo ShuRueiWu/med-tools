@@ -53,11 +53,6 @@
          background:var(--panel);border:1px solid var(--line);
          border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(120,90,50,.06)}
   .panel h2{font-size:15px;margin:0 0 2px}
-  .readout{min-height:34px;background:var(--accent-soft);border-radius:10px;padding:8px 12px;
-           margin:8px 0 12px;font-size:14px}
-  .readout .en{font-weight:600}
-  .readout .zh{color:var(--muted);font-size:12px}
-  .readout .empty{color:var(--muted);font-weight:400}
   .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
   .listhead .count{font-size:12px;color:var(--muted)}
   ul.sel{list-style:none;margin:0 0 12px;padding:0;max-height:230px;overflow:auto}
@@ -461,8 +456,9 @@ function renderFigure(svgId, view){
     let cls='region';
     if(r.id==='ear') cls+=' ear';
     if(PLAIN.has(r.id)) cls+=' plain';   // facial-feature zones: no divider box, drawn art instead
+    const ord = r.shape.y!=null ? r.shape.y : (r.shape.cy - r.shape.ry);  // ellipse (ear) has no y → use top edge
     const el = shapeSVG(r.shape).replace('/>',
-      ` class="${cls}" data-key="${r.key}" data-en="${r.en}" data-zh="${r.zh}" data-side="${r.side}"></`
+      ` class="${cls}" data-key="${r.key}" data-en="${r.en}" data-zh="${r.zh}" data-side="${r.side}" data-ord="${ord}"></`
       + closeTag(r.shape.t));
     if(r.id==='ear') ears+=el; else bands+=el;
   });
@@ -538,28 +534,6 @@ const FOOT_P = [
   rZone('t5-pad','5th toe pad','第5趾腹',146,72,16,24),
 ];
 
-// Head detail. Clipped to a head silhouette (opts.sil). r.side: 'L'/'R' = fixed
-// side; 'C' = central/no-side; absent = follows the R/L toggle.
-const HEAD_LAT = [
-  rZone('vertex','Vertex','頭頂',40,18,110,38),
-  rZone('frontal','Frontal','額/前額',27,56,56,42),
-  rZone('parietal','Parietal','頂',84,56,52,42),
-  rZone('occipital','Occipital','枕',130,56,38,64),
-  rZone('periorb','Periorbital / orbital','眼周/眶',27,98,52,46),
-  rZone('temporal','Temporal','顳',74,96,42,52),
-  rZone('suboccip','Suboccipital / nuchal','枕下/項',104,120,64,48),
-  rZone('periaur','Ear / peri-auricular','耳/耳周',90,116,20,28),
-];
-const HEAD_SUP = [
-  {...rZone('s-frL','Frontal','額',37,23,58,56), side:'L'},
-  {...rZone('s-frR','Frontal','額',95,23,58,56), side:'R'},
-  {...rZone('s-paL','Parietal','頂',37,79,58,50), side:'L'},
-  {...rZone('s-paR','Parietal','頂',95,79,58,50), side:'R'},
-  {...rZone('s-ocL','Occipital','枕',37,129,58,60), side:'L'},
-  {...rZone('s-ocR','Occipital','枕',95,129,58,60), side:'R'},
-  {...rZone('s-vtx','Vertex','巔頂',79,88,32,34), side:'C'},
-];
-
 function mirrorAcross(s,W){           // reflect a detail shape across viewBox centre
   if(s.t==='rect')    return {...s, x:W - s.x - s.w};
   if(s.t==='ellipse') return {...s, cx:W - s.cx};
@@ -572,26 +546,17 @@ function mirrorAcross(s,W){           // reflect a detail shape across viewBox c
 function renderDetail(svgId, regions, opts){
   opts=opts||{};
   const svg=document.getElementById(svgId);
-  const clipped=!!opts.sil;
   const W=opts.W||200;
   let body='';
-  regions.forEach(r0=>{
+  regions.forEach((r0,i)=>{
     const shape = opts.mirror ? mirrorAcross(r0.shape, W) : r0.shape;
     const side = (opts.side!=null) ? opts.side : (r0.side||'');
-    const cls='region'+(clipped?'':' solid')+(r0.nail?' nail':'');
+    const cls='region solid'+(r0.nail?' nail':'');
     body+=shapeSVG(shape).replace('/>',
-      ` class="${cls}" data-key="${svgId}|${r0.id}" data-en="${r0.en}" data-zh="${r0.zh}" data-side="${side}"></`
+      ` class="${cls}" data-key="${svgId}|${r0.id}" data-en="${r0.en}" data-zh="${r0.zh}" data-side="${side}" data-ord="${(opts.ord||0)+i}"></`
       + closeTag(shape.t));
   });
-  if(clipped){
-    svg.innerHTML = `<defs><clipPath id="dc_${svgId}">${opts.sil}</clipPath></defs>`
-      + opts.sil.replace('/>',' fill="var(--skin)" stroke="var(--skin-stroke)" stroke-width="1.4"/>')
-      + `<g clip-path="url(#dc_${svgId})">${body}</g>`
-      + opts.sil.replace('/>',' fill="none" stroke="var(--skin-stroke)" stroke-width="1.4"/>')
-      + (opts.extra||'');
-  } else {
-    svg.innerHTML = body;
-  }
+  svg.innerHTML = body;
 }
 
 // head: reference diagram is static in the HTML; selection is via a clickable
@@ -609,27 +574,28 @@ const HEAD_TEXT = [
 ];
 (function renderHeadList(){
   let h='';
-  HEAD_TEXT.forEach(r=>{
+  HEAD_TEXT.forEach((r,i)=>{
     let chips='';
     r.sides.forEach(s=>{
       const label = s==='C' ? '標記' : (s==='L'?'左 L':'右 R');
       const sideAttr = s==='C' ? '' : s;
-      chips += `<b class="region textreg" data-key="head|${r.id}|${s}" data-en="${r.en}" data-zh="${r.zh}" data-side="${sideAttr}">${label}</b>`;
+      chips += `<b class="region textreg" data-key="head|${r.id}|${s}" data-en="${r.en}" data-zh="${r.zh}" data-side="${sideAttr}" data-ord="${20+i}">${label}</b>`;
     });
     h += `<div class="hlrow"><span class="hlname">${r.en} <small>${r.zh}</small></span><span class="hlchips">${chips}</span></div>`;
   });
   document.getElementById('headList').innerHTML = h;
 })();
 // hand: dorsal base = right (thumb on left); palmar base = left
-renderDetail('dHandD_L',HAND_D,{W:200,side:'L',mirror:true });
-renderDetail('dHandD_R',HAND_D,{W:200,side:'R',mirror:false});
-renderDetail('dHandP_L',HAND_P,{W:200,side:'L',mirror:false});
-renderDetail('dHandP_R',HAND_P,{W:200,side:'R',mirror:true });
+// ord base ≈ anatomical y of hands/feet on the main figure (head→toe sort key)
+renderDetail('dHandD_L',HAND_D,{W:200,side:'L',mirror:true ,ord:300});
+renderDetail('dHandD_R',HAND_D,{W:200,side:'R',mirror:false,ord:300});
+renderDetail('dHandP_L',HAND_P,{W:200,side:'L',mirror:false,ord:300});
+renderDetail('dHandP_R',HAND_P,{W:200,side:'R',mirror:true ,ord:300});
 // foot: dorsal base = right (great toe on left); plantar base = left
-renderDetail('dFootD_L',FOOT_D,{W:200,side:'L',mirror:true });
-renderDetail('dFootD_R',FOOT_D,{W:200,side:'R',mirror:false});
-renderDetail('dFootP_L',FOOT_P,{W:200,side:'L',mirror:false});
-renderDetail('dFootP_R',FOOT_P,{W:200,side:'R',mirror:true });
+renderDetail('dFootD_L',FOOT_D,{W:200,side:'L',mirror:true ,ord:520});
+renderDetail('dFootD_R',FOOT_D,{W:200,side:'R',mirror:false,ord:520});
+renderDetail('dFootP_L',FOOT_P,{W:200,side:'L',mirror:false,ord:520});
+renderDetail('dFootP_R',FOOT_P,{W:200,side:'R',mirror:true ,ord:520});
 
 // ---- interaction ----------------------------------------------------------
 const selected = new Map(); // key -> {en,zh,side}
@@ -663,15 +629,31 @@ function refresh(){
   countEl.textContent = selected.size;
   selUl.innerHTML='';
   emptyList.style.display = selected.size? 'none':'block';
-  const lines=[];
-  selected.forEach((r,key)=>{
+  selected.forEach((r,key)=>{                       // panel list: per-entry, insertion order (each removable)
     const sw = sideWord(r.side);
     const li=document.createElement('li');
     li.innerHTML = `<span class="dot"></span>`
       + `<span class="txt"><b>${sw?sw+' ':''}${r.en}</b><small>${sw?'('+(r.side==='R'?'右':'左')+') ':''}${r.zh}</small></span>`
       + `<button title="移除" data-rm="${key}">×</button>`;
     selUl.appendChild(li);
-    lines.push(phrase(r));
+  });
+  // generated description: head→toe order (data-ord); L+R of the same region merge
+  // to "bilateral <region>" (singular — avoids irregular English plurals); duplicate
+  // phrases (same region marked on front & back views) collapse to one.
+  const items=[...selected.values()].sort((a,b)=>(a.ord||0)-(b.ord||0));
+  const lines=[], merged=new Set();
+  items.forEach(r=>{
+    let line;
+    if((r.side==='L'||r.side==='R') &&
+       items.some(o=>o!==r && o.en===r.en && (o.side==='L'||o.side==='R') && o.side!==r.side)){
+      if(merged.has(r.en)) return;                  // partner already emitted as bilateral
+      merged.add(r.en);
+      line='bilateral '+r.en.charAt(0).toLowerCase()+r.en.slice(1);
+    } else {
+      line=phrase(r);
+    }
+    line=line.charAt(0).toLowerCase()+line.slice(1);  // mid-sentence items read lowercase
+    if(!lines.includes(line)) lines.push(line);
   });
   out.value = lines.length ? 'Lesions noted at: '+lines.join(', ')+'.' : '';
 }
@@ -691,7 +673,7 @@ function toggleRegion(t){
     selected.delete(key); t.classList.remove('selected'); refresh();
     showToast('✕ 移除 '+label+'　共 '+selected.size+' 處');
   } else {
-    selected.set(key,{en:t.dataset.en,zh:t.dataset.zh,side:t.dataset.side});
+    selected.set(key,{en:t.dataset.en,zh:t.dataset.zh,side:t.dataset.side,ord:Number(t.dataset.ord)||0});
     t.classList.add('selected'); refresh();
     showToast('✓ 已標記 '+label+'　共 '+selected.size+' 處');
   }
